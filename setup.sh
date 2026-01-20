@@ -86,12 +86,18 @@ echo ""
 
 # Install frontend dependencies
 echo -e "${BLUE}Installing frontend dependencies...${NC}"
-echo -e "${YELLOW}  (This may take 2-3 minutes - downloading React, Vite, D3.js, etc.)${NC}"
+echo -e "${YELLOW}  (This may take 1-2 minutes - downloading React, Vite, D3.js, etc.)${NC}"
 cd frontend
 if [ -f "package.json" ]; then
     # Clean install to avoid corruption issues
-    rm -rf node_modules package-lock.json 2>/dev/null || true
-    npm install
+    rm -rf node_modules yarn.lock package-lock.json 2>/dev/null || true
+    
+    # Use yarn if available (faster and more reliable), otherwise npm
+    if command -v yarn &> /dev/null; then
+        yarn install
+    else
+        npm install
+    fi
     echo -e "${GREEN}✓ Frontend dependencies installed${NC}"
 else
     echo -e "${RED}Error: frontend/package.json not found${NC}"
@@ -217,8 +223,15 @@ echo ""
 if [ ! -d "frontend/node_modules" ] || [ ! -f "frontend/node_modules/.bin/vite" ]; then
     echo -e "${YELLOW}Frontend dependencies missing or corrupted. Installing...${NC}"
     cd frontend
-    rm -rf node_modules package-lock.json 2>/dev/null
-    npm install
+    rm -rf node_modules yarn.lock package-lock.json 2>/dev/null
+    
+    # Use yarn if available (faster), otherwise npm
+    if command -v yarn &> /dev/null; then
+        yarn install
+    else
+        npm install
+    fi
+    
     if [ $? -ne 0 ]; then
         echo -e "${RED}Failed to install frontend dependencies${NC}"
         exit 1
