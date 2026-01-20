@@ -89,7 +89,9 @@ echo -e "${BLUE}Installing frontend dependencies...${NC}"
 echo -e "${YELLOW}  (This may take 2-3 minutes - downloading React, Vite, D3.js, etc.)${NC}"
 cd frontend
 if [ -f "package.json" ]; then
-    npm install --silent
+    # Clean install to avoid corruption issues
+    rm -rf node_modules package-lock.json 2>/dev/null || true
+    npm install
     echo -e "${GREEN}✓ Frontend dependencies installed${NC}"
 else
     echo -e "${RED}Error: frontend/package.json not found${NC}"
@@ -205,10 +207,26 @@ cd "$SCRIPT_DIR"
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 echo -e "${BLUE}🧠 Starting Brian...${NC}"
 echo ""
+
+# Check if frontend dependencies are installed
+if [ ! -d "frontend/node_modules" ] || [ ! -f "frontend/node_modules/.bin/vite" ]; then
+    echo -e "${YELLOW}Frontend dependencies missing or corrupted. Installing...${NC}"
+    cd frontend
+    rm -rf node_modules package-lock.json 2>/dev/null
+    npm install
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Failed to install frontend dependencies${NC}"
+        exit 1
+    fi
+    cd ..
+    echo -e "${GREEN}✓ Frontend dependencies installed${NC}"
+    echo ""
+fi
 
 # Activate virtual environment
 source venv/bin/activate
