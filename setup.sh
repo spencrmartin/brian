@@ -87,17 +87,47 @@ echo ""
 # Install frontend dependencies
 echo -e "${BLUE}Installing frontend dependencies...${NC}"
 echo -e "${YELLOW}  (This may take 1-2 minutes - downloading React, Vite, D3.js, etc.)${NC}"
+echo ""
+
+# Ask user which package manager to use
+PACKAGE_MANAGER=""
+if command -v yarn &> /dev/null; then
+    echo -e "${YELLOW}Both npm and yarn are available.${NC}"
+    echo -e "${YELLOW}Note: If you're on a corporate VPN, yarn may fail. Use npm instead.${NC}"
+    echo ""
+    read -p "Which package manager would you like to use? (npm/yarn) [npm]: " PM_CHOICE
+    PM_CHOICE=${PM_CHOICE:-npm}
+    if [ "$PM_CHOICE" = "yarn" ]; then
+        PACKAGE_MANAGER="yarn"
+    else
+        PACKAGE_MANAGER="npm"
+    fi
+else
+    PACKAGE_MANAGER="npm"
+    echo -e "${YELLOW}Using npm (yarn not found)${NC}"
+fi
+echo ""
+
 cd frontend
 if [ -f "package.json" ]; then
     # Clean install to avoid corruption issues
     rm -rf node_modules yarn.lock package-lock.json 2>/dev/null || true
     
-    # Use yarn if available (faster and more reliable), otherwise npm
-    if command -v yarn &> /dev/null; then
-        yarn install
+    echo -e "${YELLOW}  Installing with $PACKAGE_MANAGER...${NC}"
+    if [ "$PACKAGE_MANAGER" = "yarn" ]; then
+        yarn install --network-timeout 100000
     else
-        npm install
+        npm install --loglevel=info --no-audit
     fi
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}Error: Failed to install frontend dependencies${NC}"
+        if [ "$PACKAGE_MANAGER" = "yarn" ]; then
+            echo -e "${YELLOW}Tip: Try running setup again and choose 'npm' instead${NC}"
+        fi
+        exit 1
+    fi
+    
     echo -e "${GREEN}✓ Frontend dependencies installed${NC}"
 else
     echo -e "${RED}Error: frontend/package.json not found${NC}"
@@ -225,12 +255,8 @@ if [ ! -d "frontend/node_modules" ] || [ ! -f "frontend/node_modules/.bin/vite" 
     cd frontend
     rm -rf node_modules yarn.lock package-lock.json 2>/dev/null
     
-    # Use yarn if available (faster), otherwise npm
-    if command -v yarn &> /dev/null; then
-        yarn install
-    else
-        npm install
-    fi
+    # Use npm to avoid corporate registry issues
+    npm install
     
     if [ $? -ne 0 ]; then
         echo -e "${RED}Failed to install frontend dependencies${NC}"
