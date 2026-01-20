@@ -17,11 +17,10 @@ from typing import Any, Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from brian.database.connection import Database
-from brian.database.repository import KnowledgeRepository, ConnectionRepository
+from brian.database.repository import KnowledgeRepository
 from brian.services.similarity import SimilarityService
 from brian.services.link_preview import fetch_link_metadata, is_google_doc
 from brian.models.knowledge_item import KnowledgeItem, ItemType
-from brian.models.connection import Connection
 
 from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions, Server
