@@ -36,3 +36,34 @@ export function truncate(text, length = 200) {
   if (text.length <= length) return text
   return text.substring(0, length) + '...'
 }
+
+export function truncateText(text, length = 200) {
+  if (!text) return ''
+  if (text.length <= length) return text
+  return text.substring(0, length) + '...'
+}
+
+export function truncateTitle(title, maxLength = 60) {
+  if (!title) return ''
+  if (title.length <= maxLength) return title
+  
+  // Try to break at a word boundary
+  const truncated = title.substring(0, maxLength)
+  const lastSpace = truncated.lastIndexOf(' ')
+  
+  if (lastSpace > maxLength * 0.6) {
+    return truncated.substring(0, lastSpace) + '...'
+  }
+  
+  return truncated + '...'
+}
+
+export function getItemTypeEmoji(type) {
+  const emojiMap = {
+    link: '🔗',
+    note: '📝',
+    code: '💻',
+    paper: '📄'
+  }
+  return emojiMap[type] || '📄'
+}

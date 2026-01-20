@@ -16,21 +16,58 @@ class KnowledgeRepository:
     
     def create(self, item: KnowledgeItem) -> KnowledgeItem:
         """Create a new knowledge item"""
-        query = """
-            INSERT INTO knowledge_items 
-            (id, title, content, item_type, url, language, favorite, vote_count)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """
-        self.db.execute(query, (
-            item.id,
-            item.title,
-            item.content,
-            item.item_type.value,
-            item.url,
-            item.language,
-            item.favorite,
-            item.vote_count
-        ))
+        # If created_at is provided, use it; otherwise let DB use default
+        if item.created_at:
+            query = """
+                INSERT INTO knowledge_items 
+                (id, title, content, item_type, url, language, favorite, vote_count, 
+                 created_at, updated_at, accessed_at, link_title, link_description, link_image, link_site_name,
+                 pinboard_x, pinboard_y)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            created_at_str = item.created_at.isoformat()
+            self.db.execute(query, (
+                item.id,
+                item.title,
+                item.content,
+                item.item_type.value,
+                item.url,
+                item.language,
+                item.favorite,
+                item.vote_count,
+                created_at_str,
+                created_at_str,  # updated_at same as created_at initially
+                created_at_str,  # accessed_at same as created_at initially
+                item.link_title,
+                item.link_description,
+                item.link_image,
+                item.link_site_name,
+                item.pinboard_x,
+                item.pinboard_y
+            ))
+        else:
+            query = """
+                INSERT INTO knowledge_items 
+                (id, title, content, item_type, url, language, favorite, vote_count,
+                 link_title, link_description, link_image, link_site_name, pinboard_x, pinboard_y)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            self.db.execute(query, (
+                item.id,
+                item.title,
+                item.content,
+                item.item_type.value,
+                item.url,
+                item.language,
+                item.favorite,
+                item.vote_count,
+                item.link_title,
+                item.link_description,
+                item.link_image,
+                item.link_site_name,
+                item.pinboard_x,
+                item.pinboard_y
+            ))
         
         # Add tags if provided
         if item.tags:
@@ -96,7 +133,9 @@ class KnowledgeRepository:
         query = """
             UPDATE knowledge_items 
             SET title = ?, content = ?, item_type = ?, url = ?, 
-                language = ?, favorite = ?, vote_count = ?
+                language = ?, favorite = ?, vote_count = ?,
+                link_title = ?, link_description = ?, link_image = ?, link_site_name = ?,
+                pinboard_x = ?, pinboard_y = ?
             WHERE id = ?
         """
         self.db.execute(query, (
@@ -107,6 +146,12 @@ class KnowledgeRepository:
             item.language,
             item.favorite,
             item.vote_count,
+            item.link_title,
+            item.link_description,
+            item.link_image,
+            item.link_site_name,
+            item.pinboard_x,
+            item.pinboard_y,
             item.id
         ))
         
@@ -123,19 +168,49 @@ class KnowledgeRepository:
     
     def search(self, query_text: str, limit: int = 50) -> List[KnowledgeItem]:
         """Full-text search across knowledge items"""
-        query = """
-            SELECT ki.* FROM knowledge_items ki
-            JOIN knowledge_search ks ON ki.id = ks.item_id
-            WHERE knowledge_search MATCH ?
+        import sqlite3
+        
+        # Create a fresh connection for FTS queries to avoid the initialize() issue
+        # The Database wrapper's connection gets corrupted after initialize() is called
+        conn = sqlite3.connect(self.db.db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # First, search the FTS table to get matching item IDs
+        fts_query = """
+            SELECT item_id, rank 
+            FROM knowledge_search 
+            WHERE knowledge_search MATCH ? 
             ORDER BY rank
             LIMIT ?
         """
-        rows = self.db.fetchall(query, (query_text, limit))
+        cursor.execute(fts_query, (query_text, limit))
+        fts_rows = cursor.fetchall()
+        conn.close()
+        
+        if not fts_rows:
+            return []
+        
+        # Get the full item details for matching IDs using the regular db connection
+        item_ids = [row['item_id'] for row in fts_rows]
+        placeholders = ','.join('?' * len(item_ids))
+        
+        items_query = f"""
+            SELECT * FROM knowledge_items 
+            WHERE id IN ({placeholders})
+        """
+        rows = self.db.fetchall(items_query, tuple(item_ids))
+        
+        # Create a map of id to rank for sorting
+        rank_map = {row['item_id']: idx for idx, row in enumerate(fts_rows)}
         
         items = []
         for row in rows:
             tags = self._get_tags_for_item(row['id'])
             items.append(KnowledgeItem.from_db_row(dict(row), tags))
+        
+        # Sort by FTS rank
+        items.sort(key=lambda item: rank_map.get(item.id, 999))
         
         return items
     

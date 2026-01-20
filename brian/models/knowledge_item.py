@@ -32,6 +32,14 @@ class KnowledgeItem:
     updated_at: Optional[datetime] = None
     accessed_at: Optional[datetime] = None
     tags: List[str] = field(default_factory=list)
+    # Link preview metadata
+    link_title: Optional[str] = None
+    link_description: Optional[str] = None
+    link_image: Optional[str] = None
+    link_site_name: Optional[str] = None
+    # Pinboard position
+    pinboard_x: Optional[float] = None
+    pinboard_y: Optional[float] = None
     
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization"""
@@ -48,6 +56,12 @@ class KnowledgeItem:
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "accessed_at": self.accessed_at.isoformat() if self.accessed_at else None,
             "tags": self.tags,
+            "link_title": self.link_title,
+            "link_description": self.link_description,
+            "link_image": self.link_image,
+            "link_site_name": self.link_site_name,
+            "pinboard_x": self.pinboard_x,
+            "pinboard_y": self.pinboard_y,
         }
     
     @classmethod
@@ -79,7 +93,13 @@ class KnowledgeItem:
             created_at=datetime.fromisoformat(row['created_at']) if row.get('created_at') else None,
             updated_at=datetime.fromisoformat(row['updated_at']) if row.get('updated_at') else None,
             accessed_at=datetime.fromisoformat(row['accessed_at']) if row.get('accessed_at') else None,
-            tags=tags or []
+            tags=tags or [],
+            link_title=row.get('link_title'),
+            link_description=row.get('link_description'),
+            link_image=row.get('link_image'),
+            link_site_name=row.get('link_site_name'),
+            pinboard_x=row.get('pinboard_x'),
+            pinboard_y=row.get('pinboard_y'),
         )
 
 

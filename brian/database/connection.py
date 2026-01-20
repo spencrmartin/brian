@@ -82,13 +82,10 @@ class Database:
     
     def _migrate(self, from_version: int, to_version: int):
         """Run database migrations"""
-        # Placeholder for future migrations
-        conn = self.connect()
-        cursor = conn.cursor()
+        from .migrations import apply_migrations
         
-        # For now, just update version
-        cursor.execute(get_schema_version_sql())
-        conn.commit()
+        conn = self.connect()
+        apply_migrations(conn, from_version, to_version)
         print(f"Migration complete: {from_version} -> {to_version}")
     
     @contextmanager

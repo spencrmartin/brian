@@ -2,7 +2,7 @@
 Database schema for brian - inspired by Goose's SQLite architecture
 """
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 3
 
 # Schema creation SQL statements
 SCHEMA_SQL = """
@@ -24,7 +24,13 @@ CREATE TABLE IF NOT EXISTS knowledge_items (
     vote_count INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP  -- For time machine
+    accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- For time machine
+    link_title TEXT,  -- Rich preview: title from og:title or <title>
+    link_description TEXT,  -- Rich preview: description from og:description
+    link_image TEXT,  -- Rich preview: image URL from og:image
+    link_site_name TEXT,  -- Rich preview: site name from og:site_name
+    pinboard_x REAL,  -- X position on pinboard canvas
+    pinboard_y REAL  -- Y position on pinboard canvas
 );
 
 -- Tags table

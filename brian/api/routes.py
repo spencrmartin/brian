@@ -8,6 +8,7 @@ from datetime import datetime
 from ..models import KnowledgeItem, Tag, Connection, ItemType
 from ..database import Database
 from ..database.repository import KnowledgeRepository, TagRepository, ConnectionRepository
+from ..services import SimilarityService
 
 # Create router
 router = APIRouter()
@@ -37,13 +38,26 @@ async def create_item(item: dict):
     repo, _, _ = get_repositories()
     
     try:
+        # Parse created_at if provided
+        created_at = None
+        if item.get("created_at"):
+            try:
+                created_at = datetime.fromisoformat(item["created_at"].replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
+                pass  # Use default if parsing fails
+        
         knowledge_item = KnowledgeItem(
             title=item["title"],
             content=item["content"],
             item_type=ItemType(item["item_type"]),
             url=item.get("url"),
             language=item.get("language"),
-            tags=item.get("tags", [])
+            tags=item.get("tags", []),
+            created_at=created_at,
+            link_title=item.get("link_title"),
+            link_description=item.get("link_description"),
+            link_image=item.get("link_image"),
+            link_site_name=item.get("link_site_name")
         )
         
         created = repo.create(knowledge_item)
@@ -106,6 +120,10 @@ async def update_item(item_id: str, item_data: dict):
     existing.url = item_data.get("url", existing.url)
     existing.language = item_data.get("language", existing.language)
     existing.tags = item_data.get("tags", existing.tags)
+    existing.link_title = item_data.get("link_title", existing.link_title)
+    existing.link_description = item_data.get("link_description", existing.link_description)
+    existing.link_image = item_data.get("link_image", existing.link_image)
+    existing.link_site_name = item_data.get("link_site_name", existing.link_site_name)
     
     updated = repo.update(existing)
     return updated.to_dict()
@@ -151,6 +169,24 @@ async def vote_item(item_id: str, direction: str = Query(..., pattern="^(up|down
         raise HTTPException(status_code=404, detail="Item not found")
     
     return item.to_dict()
+
+
+@router.patch("/items/{item_id}/position", response_model=dict)
+async def update_position(item_id: str, position_data: dict):
+    """Update pinboard position for an item"""
+    repo, _, _ = get_repositories()
+    
+    # Get existing item
+    existing = repo.get_by_id(item_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    # Update position
+    existing.pinboard_x = position_data.get("x")
+    existing.pinboard_y = position_data.get("y")
+    
+    updated = repo.update(existing)
+    return updated.to_dict()
 
 
 # ============================================================================
@@ -294,3 +330,105 @@ async def get_stats():
     stats["favorites"] = len(favorites)
     
     return stats
+
+
+# ============================================================================
+# Similarity / AI Endpoints
+# ============================================================================
+
+@router.get("/similarity/connections", response_model=List[dict])
+async def get_similarity_connections(
+    threshold: float = Query(0.15, ge=0.0, le=1.0, description="Minimum similarity score"),
+    max_per_item: int = Query(5, ge=1, le=20, description="Max connections per item")
+):
+    """
+    Compute content similarity connections between all items
+    Uses TF-IDF and cosine similarity
+    """
+    repo, _, _ = get_repositories()
+    
+    # Get all items
+    items = repo.get_all(limit=1000)
+    items_dict = [item.to_dict() for item in items]
+    
+    # Compute similarities
+    similarity_service = SimilarityService()
+    connections = similarity_service.find_similar_items(
+        items_dict,
+        threshold=threshold,
+        max_connections_per_item=max_per_item
+    )
+    
+    return connections
+
+
+@router.get("/similarity/related/{item_id}", response_model=List[dict])
+async def get_related_items(
+    item_id: str,
+    top_k: int = Query(5, ge=1, le=20),
+    threshold: float = Query(0.1, ge=0.0, le=1.0)
+):
+    """Get the most similar items to a specific item"""
+    repo, _, _ = get_repositories()
+    
+    # Get target item
+    target_item = repo.get_by_id(item_id)
+    if not target_item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    # Get all items
+    all_items = repo.get_all(limit=1000)
+    all_items_dict = [item.to_dict() for item in all_items]
+    target_dict = target_item.to_dict()
+    
+    # Find similar items
+    similarity_service = SimilarityService()
+    related = similarity_service.get_related_items(
+        target_dict,
+        all_items_dict,
+        top_k=top_k,
+        threshold=threshold
+    )
+    
+    # Format response
+    return [
+        {
+            "item": item,
+            "similarity": score
+        }
+        for item, score in related
+    ]
+
+
+@router.get("/similarity/score", response_model=dict)
+async def compute_similarity_score(
+    item1_id: str = Query(..., description="First item ID"),
+    item2_id: str = Query(..., description="Second item ID")
+):
+    """Compute similarity score between two specific items"""
+    repo, _, _ = get_repositories()
+    
+    # Get both items
+    item1 = repo.get_by_id(item1_id)
+    item2 = repo.get_by_id(item2_id)
+    
+    if not item1:
+        raise HTTPException(status_code=404, detail=f"Item {item1_id} not found")
+    if not item2:
+        raise HTTPException(status_code=404, detail=f"Item {item2_id} not found")
+    
+    # Compute similarity
+    similarity_service = SimilarityService()
+    score = similarity_service.get_similarity_score(
+        item1.to_dict(),
+        item2.to_dict()
+    )
+    
+    return {
+        "item1_id": item1_id,
+        "item2_id": item2_id,
+        "similarity": round(score, 3)
+    }
+
+
+
