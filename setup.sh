@@ -69,7 +69,7 @@ echo ""
 # Install Python dependencies
 echo -e "${BLUE}Installing Python dependencies...${NC}"
 if [ -f "pyproject.toml" ]; then
-    pip install -e . --quiet
+    pip install --no-cache-dir -e . --quiet
     echo -e "${GREEN}✓ Python dependencies installed${NC}"
 else
     echo -e "${RED}Error: pyproject.toml not found${NC}"
