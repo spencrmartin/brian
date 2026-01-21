@@ -583,16 +583,16 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             "updated_at": created_item.updated_at.isoformat() if created_item.updated_at else None,
         }
         
-        # Build text summary for the content array
-        text_summary = f"Created {item_type_str}: {created_item.title}"
+        # Build text content - instruct LLM not to repeat the structured data
+        text_content = f"Successfully created the item. The details are displayed in the UI above - no need to repeat them."
         if google_doc_content:
-            text_summary += f"\n\nNote: {google_doc_content['message']}"
+            text_content += f"\n\nNote: {google_doc_content['message']}"
         
         return {
             "content": [
                 {
                     "type": "text",
-                    "text": text_summary
+                    "text": text_content
                 }
             ],
             "structuredContent": structured_content
@@ -677,13 +677,13 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             "updated_at": item.updated_at.isoformat() if item.updated_at else None,
         }
         
-        # Return both content (for display) and structuredContent (for the MCP App)
-        # Content must be plain dicts, not TextContent instances
+        # Return both content and structuredContent for the MCP App
+        # Text content instructs LLM not to repeat the data shown in UI
         return {
             "content": [
                 {
                     "type": "text",
-                    "text": f"Item details for: {item.title}"
+                    "text": "Here is the item. The details are displayed in the UI above - no need to repeat them."
                 }
             ],
             "structuredContent": structured_content
