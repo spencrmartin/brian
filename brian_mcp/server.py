@@ -7,7 +7,6 @@ Allows AI assistants to search, create, and connect knowledge items.
 """
 
 import asyncio
-import html
 import json
 import os
 import sys
@@ -65,39 +64,12 @@ TEMPLATES_DIR = Path(__file__).parent / "templates"
 ITEM_VIEW_TEMPLATE = (TEMPLATES_DIR / "item_view.html").read_text()
 
 
-def generate_item_view_html(item: Optional[KnowledgeItem]) -> str:
-    """Generate HTML view for a knowledge item (MCP App)
+def generate_item_view_html() -> str:
+    """Return the HTML template for item view (MCP App)
     
-    If item is None, returns a template that will be populated by tool result data.
+    Data is populated client-side via tool result notifications.
     """
-    if item is None:
-        # Return template with placeholders - data will come from tool result
-        return ITEM_VIEW_TEMPLATE
-    
-    # Escape all user content for safety
-    title_escaped = html.escape(item.title or "Untitled")
-    content_escaped = html.escape(item.content or "")
-    
-    # Build the details dict for the pre block
-    details = {
-        "id": item.id,
-        "title": item.title,
-        "content": item.content,
-        "type": str(item.item_type.value) if hasattr(item.item_type, 'value') else str(item.item_type),
-        "tags": item.tags,
-        "url": item.url,
-        "language": item.language,
-        "favorite": item.favorite,
-        "created_at": item.created_at.isoformat() if item.created_at else None,
-        "updated_at": item.updated_at.isoformat() if item.updated_at else None,
-    }
-    details_json = html.escape(json.dumps(details, indent=2))
-    
-    # Replace template placeholders
-    return (ITEM_VIEW_TEMPLATE
-        .replace("{{title}}", title_escaped)
-        .replace("{{content}}", content_escaped)
-        .replace("{{details_json}}", details_json))
+    return ITEM_VIEW_TEMPLATE
 
 
 # MCP App URI constant
@@ -217,7 +189,7 @@ async def handle_read_resource(req: ReadResourceRequest) -> ServerResult:
     
     elif uri_str == MCP_APP_ITEM_URI:
         # Return the HTML template for item details with MCP App metadata
-        html_content = generate_item_view_html(None)
+        html_content = generate_item_view_html()
         
         return ServerResult(ReadResourceResult(
             contents=[TextResourceContents(
