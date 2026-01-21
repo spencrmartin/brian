@@ -56,3 +56,4 @@ htmlcov/
 .brian/
 start.sh
 stop.sh
+*.pid

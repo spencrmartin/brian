@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{title}}</title>
+  <title>Item Details</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
@@ -17,6 +17,63 @@
     body.light { background: #ffffff; color: #1d1d1f; }
     body.dark { background: #1d1d1f; color: #f5f5f7; }
     
+    /* Loading state */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 32px;
+    }
+    
+    .spinner {
+      width: 24px;
+      height: 24px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      opacity: 0.6;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      font-size: 0.875rem;
+      opacity: 0.6;
+    }
+    
+    /* Content (hidden until loaded) */
+    .content-wrapper {
+      display: none;
+    }
+    
+    .content-wrapper.is-ready {
+      display: block;
+    }
+    
+    .loading.is-hidden {
+      display: none;
+    }
+    
+    /* Item display styles */
+    .item-type {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    
+    body.light .item-type { background: #e5e5e7; color: #6e6e73; }
+    body.dark .item-type { background: #3d3d3f; color: #a1a1a6; }
+    
     h1 {
       font-size: 1.5rem;
       font-weight: 600;
@@ -24,12 +81,44 @@
       line-height: 1.3;
     }
     
-    .content {
+    .item-content {
       font-size: 0.95rem;
       margin-bottom: 16px;
       white-space: pre-wrap;
       word-wrap: break-word;
     }
+    
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    
+    .tag {
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+    
+    body.light .tag { background: #007aff20; color: #007aff; }
+    body.dark .tag { background: #0a84ff30; color: #0a84ff; }
+    
+    .meta {
+      font-size: 0.75rem;
+      opacity: 0.6;
+      margin-bottom: 16px;
+    }
+    
+    .url-link {
+      display: inline-block;
+      font-size: 0.875rem;
+      margin-bottom: 16px;
+      word-break: break-all;
+    }
+    
+    body.light .url-link { color: #007aff; }
+    body.dark .url-link { color: #0a84ff; }
     
     pre {
       font-family: 'SF Mono', Monaco, 'Courier New', monospace;
@@ -53,79 +142,252 @@
   </style>
 </head>
 <body class="light">
-  <h1>{{title}}</h1>
-  <p class="content">{{content}}</p>
-  <pre>{{details_json}}</pre>
+  <!-- Loading state -->
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading item details...</div>
+  </div>
+
+  <!-- Content (populated from tool result) -->
+  <div class="content-wrapper" id="content">
+    <div class="item-type" id="item-type"></div>
+    <h1 id="item-title"></h1>
+    <div class="tags" id="item-tags"></div>
+    <a class="url-link" id="item-url" href="#" target="_blank" style="display: none;"></a>
+    <p class="item-content" id="item-content"></p>
+    <div class="meta" id="item-meta"></div>
+    <pre id="item-details"></pre>
+  </div>
 
   <script>
-    // Simple MCP App client for theme sync
-    class McpAppClient {
-      constructor() {
-        this.pendingRequests = new Map();
-        this.requestId = 0;
-        window.addEventListener('message', (e) => this.handleMessage(e));
-        this.initialize();
+    // MCP App client with tool result handling
+    (function() {
+      'use strict';
+      
+      const pendingRequests = new Map();
+      let requestId = 0;
+      
+      // DOM elements
+      const loadingEl = document.getElementById('loading');
+      const contentEl = document.getElementById('content');
+      const typeEl = document.getElementById('item-type');
+      const titleEl = document.getElementById('item-title');
+      const tagsEl = document.getElementById('item-tags');
+      const urlEl = document.getElementById('item-url');
+      const contentTextEl = document.getElementById('item-content');
+      const metaEl = document.getElementById('item-meta');
+      const detailsEl = document.getElementById('item-details');
+      
+      // Escape HTML for safety
+      function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
       }
       
-      async initialize() {
-        try {
-          const result = await this.request('ui/initialize', {});
-          if (result?.hostContext?.theme) {
-            this.applyTheme(result.hostContext.theme);
-          }
-          this.notify('ui/notifications/initialized', {});
-          this.reportSize();
-        } catch (error) {
-          console.error('Failed to initialize MCP App:', error);
+      // Format date
+      function formatDate(isoString) {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      
+      // Populate UI with item data
+      function populateItem(rawData) {
+        console.log('[brian-item-view] populateItem called with:', rawData);
+        
+        // Handle case where data might be wrapped in structuredContent
+        var data = rawData;
+        if (rawData && rawData.structuredContent) {
+          data = rawData.structuredContent;
         }
+        
+        console.log('[brian-item-view] Using data:', data);
+        
+        // Type badge
+        typeEl.textContent = data.type || 'unknown';
+        
+        // Title
+        titleEl.textContent = data.title || 'Untitled';
+        document.title = data.title || 'Item Details';
+        
+        // Tags - ensure we have an array
+        tagsEl.innerHTML = '';
+        var tags = data.tags;
+        if (tags && Array.isArray(tags) && tags.length > 0) {
+          for (var i = 0; i < tags.length; i++) {
+            var tag = tags[i];
+            var tagSpan = document.createElement('span');
+            tagSpan.className = 'tag';
+            tagSpan.textContent = String(tag);
+            tagsEl.appendChild(tagSpan);
+          }
+        }
+        
+        // URL
+        if (data.url) {
+          urlEl.href = data.url;
+          urlEl.textContent = data.url;
+          urlEl.style.display = 'inline-block';
+        } else {
+          urlEl.style.display = 'none';
+        }
+        
+        // Content
+        contentTextEl.textContent = data.content || '';
+        
+        // Meta info
+        var metaParts = [];
+        if (data.created_at) {
+          metaParts.push('Created: ' + formatDate(data.created_at));
+        }
+        if (data.updated_at && data.updated_at !== data.created_at) {
+          metaParts.push('Updated: ' + formatDate(data.updated_at));
+        }
+        if (data.favorite) {
+          metaParts.push('⭐ Favorite');
+        }
+        if (data.language) {
+          metaParts.push('Language: ' + data.language);
+        }
+        metaEl.textContent = metaParts.join(' • ');
+        
+        // Full JSON details
+        detailsEl.textContent = JSON.stringify(data, null, 2);
+        
+        // Show content, hide loading
+        loadingEl.classList.add('is-hidden');
+        contentEl.classList.add('is-ready');
+        
+        // Report new size
+        reportSize();
       }
       
-      handleMessage(event) {
+      // Handle incoming messages
+      function handleMessage(event) {
         const data = event.data;
         if (!data || typeof data !== 'object') return;
         
-        if ('id' in data && this.pendingRequests.has(data.id)) {
-          const { resolve, reject } = this.pendingRequests.get(data.id);
-          this.pendingRequests.delete(data.id);
+        // Skip non-JSON-RPC messages
+        if (data.jsonrpc !== '2.0') return;
+        
+        console.log('[brian-item-view] Received message:', data.method || 'response', data);
+        
+        // Handle response to our request
+        if ('id' in data && pendingRequests.has(data.id)) {
+          const { resolve, reject } = pendingRequests.get(data.id);
+          pendingRequests.delete(data.id);
           data.error ? reject(new Error(data.error.message)) : resolve(data.result);
           return;
         }
         
+        // Handle host context changes (theme)
         if (data.method === 'ui/notifications/host-context-changed') {
-          if (data.params?.theme) {
-            this.applyTheme(data.params.theme);
+          if (data.params && data.params.theme) {
+            applyTheme(data.params.theme);
+          }
+        }
+        
+        // Handle tool result - this is what populates our UI!
+        if (data.method === 'ui/notifications/tool-result') {
+          console.log('[brian-item-view] Tool result received:', data.params);
+          const params = data.params;
+          if (params && params.structuredContent) {
+            console.log('[brian-item-view] Using structuredContent:', params.structuredContent);
+            populateItem(params.structuredContent);
+          } else if (params && params.content) {
+            // Fallback: try to parse content if it's JSON
+            console.log('[brian-item-view] Falling back to content array');
+            try {
+              const textContent = params.content.find(function(c) { return c.type === 'text'; });
+              if (textContent && textContent.text) {
+                const parsed = JSON.parse(textContent.text);
+                populateItem(parsed);
+              }
+            } catch (e) {
+              console.error('[brian-item-view] Could not parse tool result:', e);
+            }
+          } else {
+            console.warn('[brian-item-view] Tool result has no structuredContent or content:', params);
           }
         }
       }
       
-      request(method, params) {
-        return new Promise((resolve, reject) => {
-          const id = ++this.requestId;
-          this.pendingRequests.set(id, { resolve, reject });
-          window.parent.postMessage({ jsonrpc: '2.0', id, method, params }, '*');
-          setTimeout(() => {
-            if (this.pendingRequests.has(id)) {
-              this.pendingRequests.delete(id);
+      // Send JSON-RPC request
+      function request(method, params) {
+        return new Promise(function(resolve, reject) {
+          const id = ++requestId;
+          pendingRequests.set(id, { resolve: resolve, reject: reject });
+          window.parent.postMessage({ jsonrpc: '2.0', id: id, method: method, params: params }, '*');
+          setTimeout(function() {
+            if (pendingRequests.has(id)) {
+              pendingRequests.delete(id);
               reject(new Error('Request timed out'));
             }
           }, 30000);
         });
       }
       
-      notify(method, params) {
-        window.parent.postMessage({ jsonrpc: '2.0', method, params }, '*');
+      // Send notification
+      function notify(method, params) {
+        window.parent.postMessage({ jsonrpc: '2.0', method: method, params: params }, '*');
       }
       
-      applyTheme(theme) {
+      // Apply theme
+      function applyTheme(theme) {
         document.body.className = theme;
       }
       
-      reportSize() {
-        this.notify('ui/notifications/size-changed', { height: document.body.scrollHeight });
+      // Report size to host
+      function reportSize() {
+        notify('ui/notifications/size-changed', { 
+          height: document.body.scrollHeight,
+          width: document.body.scrollWidth
+        });
       }
-    }
-    
-    new McpAppClient();
+      
+      // Initialize
+      async function initialize() {
+        try {
+          const result = await request('ui/initialize', {
+            protocolVersion: '2025-06-18',
+            // Use both naming conventions for compatibility
+            capabilities: {},
+            appCapabilities: {},
+            clientInfo: { name: 'brian-item-view', version: '1.0.0' },
+            appInfo: { name: 'brian-item-view', version: '1.0.0' }
+          });
+          
+          // Apply initial theme
+          if (result && result.hostContext && result.hostContext.theme) {
+            applyTheme(result.hostContext.theme);
+          }
+          
+          // Send initialized notification
+          notify('ui/notifications/initialized', {});
+          
+          // Report initial size
+          reportSize();
+        } catch (error) {
+          console.error('Failed to initialize MCP App:', error);
+        }
+      }
+      
+      // Set up message listener
+      window.addEventListener('message', handleMessage);
+      
+      // Start initialization
+      initialize();
+    })();
   </script>
 </body>
 </html>
