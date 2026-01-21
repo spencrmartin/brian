@@ -54,3 +54,5 @@ htmlcov/
 
 # Brian specific
 .brian/
+start.sh
+stop.sh

@@ -8,6 +8,7 @@ Before you begin, make sure you have:
 
 - ✅ **Python 3.8 or higher** - [Download here](https://www.python.org/downloads/)
 - ✅ **Node.js 16 or higher** - [Download here](https://nodejs.org/)
+- ✅ **pnpm** - [Install here](https://pnpm.io/installation) or run `npm install -g pnpm`
 - ✅ **Git** - [Download here](https://git-scm.com/downloads)
 
 ### Check Your Versions
@@ -15,7 +16,7 @@ Before you begin, make sure you have:
 ```bash
 python3 --version  # Should be 3.8+
 node --version     # Should be 16+
-npm --version      # Comes with Node.js
+pnpm --version     # Install with: npm install -g pnpm
 ```
 
 ## Installation
@@ -144,12 +145,12 @@ pip install -e .
 
 # Install frontend dependencies
 cd frontend
-npm install
+pnpm install
 cd ..
 
 # Start manually
 python -m brian.main &
-cd frontend && npm run dev &
+cd frontend && pnpm dev &
 ```
 
 ### Goose doesn't see Brian

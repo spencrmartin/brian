@@ -11,7 +11,7 @@ cd /Users/spencermartin/brian/frontend
 
 ### 2. Install dependencies
 ```bash
-npm install
+pnpm install
 ```
 
 This will install:
@@ -27,7 +27,7 @@ This will install:
 
 ### 3. Start development server
 ```bash
-npm run dev
+pnpm dev
 ```
 
 The frontend will run at: **http://localhost:5173**
@@ -69,7 +69,7 @@ frontend/
 - All CRUD operations
 - Search, timeline, graph endpoints
 
-## Next Steps (After npm install)
+## Next Steps (After pnpm install)
 
 I'll create:
 
@@ -92,7 +92,7 @@ VITE_API_URL=http://127.0.0.1:8080/api/v1
 ## Building for Production
 
 ```bash
-npm run build
+pnpm build
 ```
 
 This creates a `dist/` folder that can be served by FastAPI.

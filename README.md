@@ -21,6 +21,7 @@
 
 - **Python 3.8+** - [Download](https://www.python.org/downloads/)
 - **Node.js 16+** - [Download](https://nodejs.org/)
+- **pnpm** - [Install](https://pnpm.io/installation) (`npm install -g pnpm`)
 - **Goose** (optional) - For AI assistant integration - https://github.com/block/goose 
 
 ### One-Command Installation
@@ -146,14 +147,14 @@ pip install -e .
 
 # Frontend setup
 cd frontend
-npm install
+pnpm install
 
 # Start backend
 python -m brian.main
 
 # Start frontend (in another terminal)
 cd frontend
-npm run dev
+pnpm dev
 ```
 
 ### Project Structure
@@ -285,7 +286,7 @@ lsof -i :5173
 tail -f frontend.log
 
 # Reinstall dependencies
-cd frontend && npm install
+cd frontend && pnpm install
 ```
 
 ### Goose doesn't see Brian extension

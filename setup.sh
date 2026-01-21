@@ -44,6 +44,19 @@ NODE_VERSION=$(node --version)
 echo -e "${GREEN}✓ Found Node.js $NODE_VERSION${NC}"
 echo ""
 
+# Check if pnpm is installed
+echo -e "${BLUE}Checking pnpm installation...${NC}"
+if ! command -v pnpm &> /dev/null; then
+    echo -e "${RED}Error: pnpm is not installed${NC}"
+    echo "Please install pnpm: npm install -g pnpm"
+    echo "Or visit: https://pnpm.io/installation"
+    exit 1
+fi
+
+PNPM_VERSION=$(pnpm --version)
+echo -e "${GREEN}✓ Found pnpm $PNPM_VERSION${NC}"
+echo ""
+
 # Create virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
     echo -e "${BLUE}Creating Python virtual environment...${NC}"
@@ -89,42 +102,16 @@ echo -e "${BLUE}Installing frontend dependencies...${NC}"
 echo -e "${YELLOW}  (This may take 1-2 minutes - downloading React, Vite, D3.js, etc.)${NC}"
 echo ""
 
-# Ask user which package manager to use
-PACKAGE_MANAGER=""
-if command -v yarn &> /dev/null; then
-    echo -e "${YELLOW}Both npm and yarn are available.${NC}"
-    echo -e "${YELLOW}Note: If you're on a corporate VPN, yarn may fail. Use npm instead.${NC}"
-    echo ""
-    read -p "Which package manager would you like to use? (npm/yarn) [npm]: " PM_CHOICE
-    PM_CHOICE=${PM_CHOICE:-npm}
-    if [ "$PM_CHOICE" = "yarn" ]; then
-        PACKAGE_MANAGER="yarn"
-    else
-        PACKAGE_MANAGER="npm"
-    fi
-else
-    PACKAGE_MANAGER="npm"
-    echo -e "${YELLOW}Using npm (yarn not found)${NC}"
-fi
-echo ""
-
 cd frontend
 if [ -f "package.json" ]; then
     # Clean install to avoid corruption issues
     rm -rf node_modules yarn.lock package-lock.json 2>/dev/null || true
     
-    echo -e "${YELLOW}  Installing with $PACKAGE_MANAGER...${NC}"
-    if [ "$PACKAGE_MANAGER" = "yarn" ]; then
-        yarn install --network-timeout 100000
-    else
-        npm install --loglevel=info --no-audit
-    fi
+    echo -e "${YELLOW}  Installing with pnpm...${NC}"
+    pnpm install
     
     if [ $? -ne 0 ]; then
         echo -e "${RED}Error: Failed to install frontend dependencies${NC}"
-        if [ "$PACKAGE_MANAGER" = "yarn" ]; then
-            echo -e "${YELLOW}Tip: Try running setup again and choose 'npm' instead${NC}"
-        fi
         exit 1
     fi
     
@@ -155,76 +142,61 @@ echo -e "${BLUE}Configuring Goose extension...${NC}"
 
 # Create goose config directory if it doesn't exist
 if [ ! -d "$GOOSE_CONFIG_DIR" ]; then
-    echo -e "${YELLOW}Creating Goose config directory...${NC}"
     mkdir -p "$GOOSE_CONFIG_DIR"
 fi
 
-# Backup existing config if it exists
-if [ -f "$GOOSE_CONFIG" ]; then
-    BACKUP_FILE="$GOOSE_CONFIG.backup-$(date +%Y%m%d-%H%M%S)"
-    echo -e "${YELLOW}Backing up existing Goose config to:${NC}"
-    echo "  $BACKUP_FILE"
-    cp "$GOOSE_CONFIG" "$BACKUP_FILE"
+# Check if brian extension already exists in config
+if [ -f "$GOOSE_CONFIG" ] && grep -q "^  brian:" "$GOOSE_CONFIG"; then
+    echo -e "${YELLOW}Brian extension already exists in Goose config${NC}"
+    echo -e "${YELLOW}Updating configuration...${NC}"
+    # Remove existing brian config (from "  brian:" to next extension or end of extensions block)
+    sed -i.tmp '/^  brian:/,/^  [a-z]/{ /^  brian:/d; /^    /d; }' "$GOOSE_CONFIG"
+    rm -f "$GOOSE_CONFIG.tmp"
 fi
 
-# Check if brian extension already exists in config
-if [ -f "$GOOSE_CONFIG" ] && grep -q "brian:" "$GOOSE_CONFIG"; then
-    echo -e "${YELLOW}Brian extension already configured in Goose${NC}"
-else
-    # Add brian extension to Goose config
-    echo -e "${BLUE}Adding Brian to Goose extensions...${NC}"
-    
-    # Create or append to config
-    if [ ! -f "$GOOSE_CONFIG" ]; then
-        # Create new config with brian extension
-        cat > "$GOOSE_CONFIG" << EOF
-extensions:
-  brian:
-    provider: mcp
-    config:
-      command: "$SCRIPT_DIR/venv/bin/python"
-      args:
-        - "-m"
-        - "brian_mcp.server"
-      env:
-        BRIAN_DB_PATH: "$BRIAN_DIR/brian.db"
-EOF
-    else
-        # Append brian extension to existing config
-        # Check if extensions section exists
-        if grep -q "^extensions:" "$GOOSE_CONFIG"; then
-            # Add brian under existing extensions
-            sed -i.tmp '/^extensions:/a\
+# Add brian extension to Goose config
+if [ -f "$GOOSE_CONFIG" ] && grep -q "^extensions:" "$GOOSE_CONFIG"; then
+    # Insert brian after "extensions:" line
+    sed -i.tmp '/^extensions:/a\
   brian:\
-    provider: mcp\
-    config:\
-      command: "'$SCRIPT_DIR'/venv/bin/python"\
-      args:\
-        - "-m"\
-        - "brian_mcp.server"\
-      env:\
-        BRIAN_DB_PATH: "'$BRIAN_DIR'/brian.db"
+    enabled: true\
+    type: stdio\
+    name: Brian\
+    description: Personal knowledge base with semantic search\
+    cmd: '"$SCRIPT_DIR"'/venv/bin/python\
+    args:\
+      - -m\
+      - brian_mcp.server\
+    envs:\
+      BRIAN_DB_PATH: '"$BRIAN_DIR"'/brian.db\
+    env_keys: []\
+    timeout: 300\
+    bundled: null\
+    available_tools: []
 ' "$GOOSE_CONFIG"
-            rm -f "$GOOSE_CONFIG.tmp"
-        else
-            # Add extensions section with brian
-            cat >> "$GOOSE_CONFIG" << EOF
-
+    rm -f "$GOOSE_CONFIG.tmp"
+    echo -e "${GREEN}✓ Brian extension added to Goose config${NC}"
+else
+    # Create new config file with brian extension
+    cat > "$GOOSE_CONFIG" << EOF
 extensions:
   brian:
-    provider: mcp
-    config:
-      command: "$SCRIPT_DIR/venv/bin/python"
-      args:
-        - "-m"
-        - "brian_mcp.server"
-      env:
-        BRIAN_DB_PATH: "$BRIAN_DIR/brian.db"
+    enabled: true
+    type: stdio
+    name: Brian
+    description: Personal knowledge base with semantic search
+    cmd: $SCRIPT_DIR/venv/bin/python
+    args:
+      - -m
+      - brian_mcp.server
+    envs:
+      BRIAN_DB_PATH: $BRIAN_DIR/brian.db
+    env_keys: []
+    timeout: 300
+    bundled: null
+    available_tools: []
 EOF
-        fi
-    fi
-    
-    echo -e "${GREEN}✓ Brian extension added to Goose config${NC}"
+    echo -e "${GREEN}✓ Created Goose config with Brian extension${NC}"
 fi
 echo ""
 
@@ -253,10 +225,9 @@ echo ""
 if [ ! -d "frontend/node_modules" ] || [ ! -f "frontend/node_modules/.bin/vite" ]; then
     echo -e "${YELLOW}Frontend dependencies missing or corrupted. Installing...${NC}"
     cd frontend
-    rm -rf node_modules yarn.lock package-lock.json 2>/dev/null
+    rm -rf node_modules pnpm-lock.yaml 2>/dev/null
     
-    # Use npm to avoid corporate registry issues
-    npm install
+    pnpm install
     
     if [ $? -ne 0 ]; then
         echo -e "${RED}Failed to install frontend dependencies${NC}"
@@ -282,7 +253,7 @@ sleep 2
 # Start frontend in background
 echo -e "${BLUE}Starting frontend server...${NC}"
 cd frontend
-npm run dev > ../frontend.log 2>&1 &
+pnpm run dev > ../frontend.log 2>&1 &
 FRONTEND_PID=$!
 cd ..
 echo -e "${GREEN}✓ Frontend started (PID: $FRONTEND_PID)${NC}"
@@ -387,20 +358,13 @@ echo -e "  ${YELLOW}2. Open in browser:${NC}"
 echo "     http://localhost:5173"
 echo ""
 echo -e "  ${YELLOW}3. Use with Goose:${NC}"
-echo "     The 'brian' extension is now available in Goose!"
-echo "     Restart Goose to load the extension."
+echo "     Restart Goose Desktop to load the Brian extension."
 echo ""
 echo -e "  ${YELLOW}4. Stop Brian:${NC}"
 echo "     ./stop.sh"
 echo ""
-echo -e "${BLUE}Configuration:${NC}"
-echo "  Goose config: $GOOSE_CONFIG"
-echo "  Database:     $BRIAN_DIR/brian.db"
-echo ""
-echo -e "${BLUE}Documentation:${NC}"
-echo "  README.md           - Project overview"
-echo "  QUICKSTART.md       - Quick start guide"
-echo "  COMMANDS.md         - Available commands"
+echo -e "${BLUE}Data:${NC}"
+echo "  Database: $BRIAN_DIR/brian.db"
 echo ""
 echo -e "${GREEN}Happy knowledge mapping! 🧠✨${NC}"
 echo ""

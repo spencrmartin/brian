@@ -24,13 +24,13 @@ Beautiful, monochrome React frontend for brian knowledge base.
 
 ### 1. Install Dependencies
 ```bash
-cd /Users/spencermartin/brian/frontend
-npm install
+cd frontend
+pnpm install
 ```
 
 ### 2. Start Development Server
 ```bash
-npm run dev
+pnpm dev
 ```
 
 The app will run at **http://localhost:3000**
@@ -227,7 +227,7 @@ const item = await api.createItem(data)
 
 ## 🎯 Next Steps
 
-1. **Run the app** - `npm install && npm run dev`
+1. **Run the app** - `pnpm install && pnpm dev`
 2. **Test features** - Create, edit, delete items
 3. **Customize theme** - Adjust colors in `index.css`
 4. **Add components** - Build Timeline and Graph views
