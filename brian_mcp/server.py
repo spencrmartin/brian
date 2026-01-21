@@ -87,7 +87,7 @@ async def handle_read_resource(uri: str) -> str:
             "total_items": len(items),
             "by_type": {},
             "total_tags": len(set(tag for item in items if item.tags for tag in item.tags)),
-            "favorites": len([i for i in items if i.is_favorite]),
+            "favorites": len([i for i in items if i.favorite]),
         }
         
         for item in items:
@@ -573,7 +573,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             "tags": item.tags,
             "url": item.url,
             "language": item.language,
-            "is_favorite": item.is_favorite,
+            "favorite": item.favorite,
             "created_at": item.created_at.isoformat() if item.created_at else None,
             "updated_at": item.updated_at.isoformat() if item.updated_at else None,
         }
