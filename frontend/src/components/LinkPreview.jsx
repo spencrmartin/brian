@@ -34,7 +34,7 @@ export default function LinkPreview({ item }) {
       rel="noopener noreferrer"
       className="block group"
     >
-      <div className="overflow-hidden hover:bg-gray-50 transition-colors">
+      <div className="overflow-hidden hover:bg-muted/50 transition-colors">
         {/* Image */}
         {link_image && (
           <div className="w-full aspect-[2/1] bg-muted overflow-hidden">

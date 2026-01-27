@@ -144,7 +144,7 @@ const SearchFilterBar = ({
             placeholder="Search your knowledge..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="border-0 bg-white rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
+            className="border-0 bg-card rounded-full focus-visible:ring-0 focus-visible:ring-offset-0"
           />
         </div>
 

@@ -17,6 +17,21 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
   const [hoveredTheme, setHoveredTheme] = useState(null)
   const [showThemeLegend, setShowThemeLegend] = useState(false)
   const [showInfoLegend, setShowInfoLegend] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  // Detect dark mode
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'))
+    }
+    checkDarkMode()
+    
+    // Watch for class changes on html element
+    const observer = new MutationObserver(checkDarkMode)
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    
+    return () => observer.disconnect()
+  }, [])
 
   // Store D3 element references for theme highlighting
   const linkElementsRef = useRef(null)
@@ -246,6 +261,10 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     // Store link reference for theme highlighting
     linkElementsRef.current = link
 
+    // Theme-aware colors for text
+    const textColor = isDarkMode ? '#e5e5e5' : '#333'
+    const mutedTextColor = isDarkMode ? '#a3a3a3' : '#666'
+
     // Add link labels for high similarity
     const linkLabel = g.append('g')
       .attr('class', 'link-labels')
@@ -253,7 +272,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
       .data(validLinks.filter(d => d.similarity > 0.3))
       .join('text')
       .attr('font-size', 10)
-      .attr('fill', '#666')
+      .attr('fill', mutedTextColor)
       .attr('text-anchor', 'middle')
       .text(d => `${(d.similarity * 100).toFixed(0)}%`)
 
@@ -280,6 +299,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
       .join('text')
       .attr('font-size', 11)
       .attr('font-weight', 'light')
+      .attr('fill', textColor)
       .attr('dx', 12)
       .attr('dy', 4)
       .text(d => d.title.length > 30 ? d.title.substring(0, 30) + '...' : d.title)
@@ -377,7 +397,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     return () => {
       simulation.stop()
     }
-  }, [items, connections, width, height, loading])
+  }, [items, connections, width, height, loading, isDarkMode])
 
   if (loading) {
     return (
@@ -413,7 +433,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
               className={`h-12 w-12 rounded-full shadow-lg transition-colors ${
                 showThemeLegend
                   ? 'bg-black hover:bg-gray-800 text-white'
-                  : 'bg-white hover:bg-gray-100 text-black'
+                  : 'bg-card hover:bg-muted text-foreground'
               }`}
             >
               <Tag className="w-5 h-5" />
@@ -421,7 +441,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
             <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-light">
               Themes
               {allThemes.length > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 bg-white text-black rounded text-xs">
+                <span className="ml-1.5 px-1.5 py-0.5 bg-card text-foreground rounded text-xs">
                   {allThemes.length}
                 </span>
               )}
@@ -432,7 +452,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
 
       {/* Theme Legend Panel */}
       {showThemeLegend && allThemes.length > 0 && (
-        <div className="absolute top-20 right-6 bg-white/95 backdrop-blur-md p-4 rounded-lg shadow-xl border border-gray-200 max-w-sm max-h-96 overflow-y-auto">
+        <div className="absolute top-20 right-6 bg-card/95 backdrop-blur-md p-4 rounded-lg shadow-xl border border-border max-w-sm max-h-96 overflow-y-auto">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold">Theme Connections</h3>
             <button
@@ -496,7 +516,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
             className={`h-12 w-12 rounded-full shadow-lg transition-colors ${
               showInfoLegend
                 ? 'bg-black hover:bg-gray-800 text-white'
-                : 'bg-white hover:bg-gray-100 text-black'
+                : 'bg-card hover:bg-muted text-foreground'
             }`}
           >
             <Info className="w-5 h-5" />
@@ -509,7 +529,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
 
       {/* Info/Legend Panel */}
       {showInfoLegend && (
-        <div className="absolute bottom-20 right-6 bg-white/95 backdrop-blur-md p-4 rounded-lg shadow-xl border border-gray-200 max-w-sm">
+        <div className="absolute bottom-20 right-6 bg-card/95 backdrop-blur-md p-4 rounded-lg shadow-xl border border-border max-w-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold">Graph Legend</h3>
             <button
@@ -582,15 +602,15 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
           />
           
           {/* Bottom Sheet */}
-          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-[400px] z-50 animate-in slide-in-from-bottom duration-300">
-            <div className="bg-white rounded-t-2xl shadow-lg border-t border-x border-gray-200 max-h-[80vh] overflow-y-auto">
+          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-[400px] lg:w-[75vw] z-50 animate-in slide-in-from-bottom duration-300">
+            <div className="bg-card rounded-t-2xl shadow-lg border-t border-x border-border max-h-[80vh] overflow-y-auto">
               {/* Handle bar */}
               <div className="flex justify-center pt-3 pb-2">
-                <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
+                <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
               </div>
               
               {/* Card Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
                 <div className="flex items-center gap-3">
                   {selectedNode.item_type === 'link' && <LinkIcon className="w-5 h-5" />}
                   {selectedNode.item_type === 'note' && <FileText className="w-5 h-5" />}
@@ -600,7 +620,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
                 </div>
                 <button
                   onClick={() => setSelectedNode(null)}
-                  className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-gray-100 rounded-full"
+                  className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-muted rounded-full"
                 >
                   ✕
                 </button>
@@ -621,7 +641,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
                     href={selectedNode.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline flex items-center gap-2 mb-4 p-3 bg-blue-50 rounded-lg"
+                    className="text-sm text-primary hover:underline flex items-center gap-2 mb-4 p-3 bg-primary/10 rounded-lg"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <LinkIcon className="w-4 h-4 flex-shrink-0" />

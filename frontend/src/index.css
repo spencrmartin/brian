@@ -25,6 +25,12 @@
     --input: 0 0% 89.8%;
     --ring: 0 0% 3.9%;
     --radius: 0.5rem;
+    
+    /* Custom accent color (set via JS) */
+    --accent-color: #3b82f6;
+    --accent-h: 217;
+    --accent-s: 91%;
+    --accent-l: 60%;
   }
 
   .dark {
@@ -118,4 +124,27 @@
 /* Gradient text effect */
 .gradient-text {
   @apply bg-clip-text text-transparent bg-gradient-to-r from-foreground via-muted-foreground to-foreground;
+}
+
+/* Accent color utilities */
+.bg-accent-color {
+  background-color: var(--accent-color);
+}
+
+.text-accent-color {
+  color: var(--accent-color);
+}
+
+.border-accent-color {
+  border-color: var(--accent-color);
+}
+
+.ring-accent-color {
+  --tw-ring-color: var(--accent-color);
+}
+
+/* Accent color hover states */
+.hover\:bg-accent-color:hover {
+  background-color: var(--accent-color);
+  filter: brightness(0.9);
 }

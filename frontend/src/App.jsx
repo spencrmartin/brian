@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useKnowledge } from '@/hooks/useKnowledge'
+import { useSettings } from '@/contexts/SettingsContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +12,7 @@ import { BrainLogo } from '@/components/BrainLogo'
 import { SimilarityGraph } from '@/components/SimilarityGraph'
 import { InfinitePinboard } from '@/components/InfinitePinboard'
 import { Timeline } from '@/components/Timeline'
+import { Settings } from '@/components/Settings'
 import LinkPreview from '@/components/LinkPreview'
 import Antigravity from '@/components/animations/Antigravity'
 import {
@@ -50,6 +52,30 @@ function App() {
     searchItems,
     loadItems,
   } = useKnowledge()
+  
+  const { accentColor, getCardDensityClasses } = useSettings()
+  const densityClasses = getCardDensityClasses()
+
+  // Dark mode detection for background particles
+  const [isDarkMode, setIsDarkMode] = useState(false)
+  
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'))
+    }
+    
+    // Initial check
+    checkDarkMode()
+    
+    // Watch for changes
+    const observer = new MutationObserver(checkDarkMode)
+    observer.observe(document.documentElement, { 
+      attributes: true, 
+      attributeFilter: ['class'] 
+    })
+    
+    return () => observer.disconnect()
+  }, [])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedView, setSelectedView] = useState('feed')
@@ -157,7 +183,7 @@ function App() {
             className={`h-12 w-12 rounded-full shadow-lg transition-colors ${
               selectedView === 'feed' 
                 ? 'bg-black hover:bg-gray-800 text-white' 
-                : 'bg-white hover:bg-gray-100 text-black'
+                : 'bg-card hover:bg-muted text-foreground'
             }`}
             onClick={() => setSelectedView('feed')}
           >
@@ -175,7 +201,7 @@ function App() {
             className={`h-12 w-12 rounded-full shadow-lg transition-colors ${
               selectedView === 'timeline' 
                 ? 'bg-black hover:bg-gray-800 text-white' 
-                : 'bg-white hover:bg-gray-100 text-black'
+                : 'bg-card hover:bg-muted text-foreground'
             }`}
             onClick={() => setSelectedView('timeline')}
           >
@@ -193,7 +219,7 @@ function App() {
             className={`h-12 w-12 rounded-full shadow-lg transition-colors ${
               selectedView === 'graph' 
                 ? 'bg-black hover:bg-gray-800 text-white' 
-                : 'bg-white hover:bg-gray-100 text-black'
+                : 'bg-card hover:bg-muted text-foreground'
             }`}
             onClick={() => setSelectedView('graph')}
           >
@@ -204,14 +230,14 @@ function App() {
           </div>
         </div>
 
-        {/* Pinboard Button */}
-        <div className="group relative">
+        {/* Pinboard Button - Hidden for now */}
+        {/* <div className="group relative">
           <Button 
             size="icon"
             className={`h-12 w-12 rounded-full shadow-lg transition-colors ${
               selectedView === 'pinboard' 
                 ? 'bg-black hover:bg-gray-800 text-white' 
-                : 'bg-white hover:bg-gray-100 text-black'
+                : 'bg-card hover:bg-muted text-foreground'
             }`}
             onClick={() => setSelectedView('pinboard')}
           >
@@ -220,20 +246,20 @@ function App() {
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-light">
             Pinboard
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Filter Pills Bar - Only show when feed is selected and a filter is active */}
       {selectedView === 'feed' && filterType !== null && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-40">
-          <div className="bg-blue-500 rounded-full p-1 flex gap-1 shadow-lg">
+          <div className="rounded-full p-1 flex gap-1 shadow-lg bg-accent-color">
             {filterButtons.map((filter) => (
               <button
                 key={filter.id ?? 'all'}
                 className={`px-4 py-2 rounded-full text-sm font-light transition-colors flex items-center gap-1.5 ${
                   filterType === filter.id
-                    ? 'bg-white text-blue-500'
-                    : 'text-white hover:bg-blue-600'
+                    ? 'bg-card text-foreground'
+                    : 'text-white hover:brightness-90'
                 }`}
                 onClick={() => setFilterType(filter.id)}
               >
@@ -280,7 +306,12 @@ function App() {
           <Button 
             size="icon"
             variant="secondary"
-            className="h-12 w-12 rounded-full shadow-lg"
+            className={`h-12 w-12 rounded-full shadow-lg ${
+              selectedView === 'settings' 
+                ? 'bg-black hover:bg-gray-800 text-white' 
+                : ''
+            }`}
+            onClick={() => setSelectedView('settings')}
           >
             <SettingsIcon className="w-5 h-5" />
           </Button>
@@ -294,18 +325,18 @@ function App() {
           <div className="group relative">
             <Button 
               size="icon"
-              className="h-12 w-12 rounded-full shadow-lg bg-blue-500 hover:bg-blue-600"
+              className="h-12 w-12 rounded-full shadow-lg bg-accent-color hover:bg-accent-color"
               onClick={() => setFilterType('link')}
             >
               <Layers className="w-5 h-5" />
             </Button>
             {/* Filter Pills on Hover */}
             <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              <div className="bg-blue-500 rounded-full p-1 flex gap-1 shadow-lg">
+              <div className="bg-accent-color rounded-full p-1 flex gap-1 shadow-lg">
                 {filterButtons.map((filter) => (
                   <button
                     key={filter.id ?? 'all'}
-                    className="px-4 py-2 bg-white text-blue-500 rounded-full text-sm font-light hover:bg-blue-50 transition-colors pointer-events-auto flex items-center gap-1.5"
+                    className="px-4 py-2 bg-card text-foreground rounded-full text-sm font-light hover:bg-muted transition-colors pointer-events-auto flex items-center gap-1.5"
                     onClick={() => setFilterType(filter.id)}
                   >
                     {filter.icon}
@@ -320,8 +351,8 @@ function App() {
 
       {/* Main Content */}
       <main className={selectedView === 'graph' || selectedView === 'pinboard' ? '' : 'container mx-auto px-4 py-6 pl-24 pb-32 md:pl-4 md:pb-6'}>
-        {/* Random Fact Header - Hide for graph and pinboard views */}
-        {selectedView !== 'graph' && selectedView !== 'pinboard' && (
+        {/* Random Fact Header - Only show on feed/home view */}
+        {selectedView === 'feed' && (
           <div className="max-w-7xl mx-auto mb-6" style={{ paddingTop: '35vh' }}>
             <h2 className="text-5xl font-light leading-snug">
               {(() => {
@@ -399,7 +430,7 @@ function App() {
             <div className="fixed inset-0 pointer-events-none opacity-30 z-0">
               <Antigravity 
                 count={200}
-                color="#d1d5db"
+                color={isDarkMode ? '#4a4a4a' : '#d1d5db'}
                 particleSize={1.5}
                 autoAnimate={true}
                 particleShape="sphere"
@@ -444,14 +475,14 @@ function App() {
                       </h3>
                       
                       {/* Items Grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 ${densityClasses.grid}`}>
                         {items.map((item) => (
                   <div key={item.id} className="group">
                     {/* Render link preview for link items, regular card for others */}
                     {item.item_type === 'link' ? (
-                      <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200 hover:shadow-lg transition-all hover:-translate-y-1">
+                      <div className="bg-card rounded-lg shadow-md overflow-hidden border border-border hover:shadow-lg transition-all hover:-translate-y-1">
                         {/* Action buttons for link items */}
-                        <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+                        <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
                           <div className="flex items-center gap-2">
                             {getTypeIcon(item.item_type)}
                             <Button
@@ -498,7 +529,7 @@ function App() {
                         
                         {/* Tags below preview */}
                         {item.tags && item.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 p-3 border-t border-gray-200 bg-gray-50">
+                          <div className="flex flex-wrap gap-1.5 p-3 border-t border-border bg-muted/50">
                             {item.tags.slice(0, 3).map((tag, index) => (
                               <Badge key={index} variant="secondary" className="text-xs">
                                 {tag}
@@ -513,8 +544,8 @@ function App() {
                         )}
                       </div>
                     ) : (
-                      <Card className="hover:shadow-lg transition-all hover:-translate-y-1 flex flex-col h-full">
-                        <CardHeader className="pb-3">
+                      <Card className={`hover:shadow-lg transition-all hover:-translate-y-1 flex flex-col h-full ${densityClasses.card}`}>
+                        <CardHeader className={densityClasses.cardHeader}>
                           <div className="flex items-start justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2">
                               {getTypeIcon(item.item_type)}
@@ -550,7 +581,7 @@ function App() {
                             </div>
                           </div>
                           <CardTitle 
-                            className="text-base font-light leading-snug line-clamp-2" 
+                            className={`${densityClasses.title} font-light leading-snug line-clamp-2`}
                             title={item.title}
                           >
                             {truncateTitle(item.title, 70)}
@@ -564,8 +595,8 @@ function App() {
                           </CardDescription>
                         </CardHeader>
                         
-                        <CardContent className="flex-1 pb-3">
-                          <p className="text-sm text-muted-foreground line-clamp-4 mb-3">
+                        <CardContent className={`flex-1 ${densityClasses.cardContent}`}>
+                          <p className={`${densityClasses.text} text-muted-foreground line-clamp-4 mb-3`}>
                             {truncateText(item.content, 150)}
                           </p>
                           
@@ -574,7 +605,7 @@ function App() {
                               href={item.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-primary hover:underline flex items-center gap-1 truncate"
+                              className="text-xs text-accent-color hover:underline flex items-center gap-1 truncate"
                               onClick={(e) => e.stopPropagation()}
                             >
                               <LinkIcon className="w-3 h-3 flex-shrink-0" />
@@ -639,7 +670,7 @@ function App() {
 
         {/* Graph View - Similarity Network (Full Bleed) */}
         {!loading && !error && selectedView === 'graph' && (
-          <div className="fixed inset-0 bg-white">
+          <div className="fixed inset-0 bg-background">
             {items.length === 0 ? (
               <div className="flex items-center justify-center h-full text-center text-muted-foreground">
                 <div>
@@ -668,7 +699,7 @@ function App() {
 
         {/* Pinboard View (Full Bleed) */}
         {!loading && !error && selectedView === 'pinboard' && (
-          <div className="fixed inset-0 bg-gray-50">
+          <div className="fixed inset-0 bg-muted">
             {items.length === 0 ? (
               <div className="flex items-center justify-center h-full text-center text-muted-foreground">
                 <div>
@@ -688,6 +719,11 @@ function App() {
               />
             )}
           </div>
+        )}
+
+        {/* Settings View */}
+        {selectedView === 'settings' && (
+          <Settings items={items} onImport={loadItems} />
         )}
       </main>
 

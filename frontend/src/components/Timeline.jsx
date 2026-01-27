@@ -124,7 +124,7 @@ export function Timeline({
   return (
     <div className="relative max-w-5xl mx-auto">
       {/* Timeline line */}
-      <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200" />
+      <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-border" />
 
       {/* SVG for tag connections */}
       <svg 
@@ -205,7 +205,7 @@ export function Timeline({
               {dateItems.map((item) => (
                 <div key={item.id} className="relative">
                   {/* Connection dot */}
-                  <div className="absolute -left-[4.5rem] top-6 w-4 h-4 rounded-full bg-white border-4 border-black z-10" />
+                  <div className="absolute -left-[4.5rem] top-6 w-4 h-4 rounded-full bg-card border-4 border-foreground z-10" />
                   
                   {/* Render link preview for link items, regular card for others */}
                   {item.item_type === 'link' ? (

@@ -238,7 +238,7 @@ export function InfinitePinboard({
   }, [draggingId, positions])
 
   return (
-    <div className="w-full h-full bg-gray-50 overflow-hidden relative">
+    <div className="w-full h-full bg-muted overflow-hidden relative">
       <TransformWrapper
         ref={transformRef}
         initialScale={1}
@@ -385,7 +385,7 @@ export function InfinitePinboard({
                         title="Drag to connect to another card"
                         style={{ pointerEvents: 'auto' }}
                       >
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                        <div className="w-2 h-2 bg-foreground rounded-full"></div>
                       </div>
                       <div
                         className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-blue-500 rounded-full cursor-crosshair hover:bg-blue-600 hover:scale-110 transition-all z-10 border-2 border-white shadow-lg opacity-0 group-hover:opacity-100 flex items-center justify-center"
@@ -393,7 +393,7 @@ export function InfinitePinboard({
                         title="Drag to connect to another card"
                         style={{ pointerEvents: 'auto' }}
                       >
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                        <div className="w-2 h-2 bg-foreground rounded-full"></div>
                       </div>
                       <div
                         className="absolute left-1/2 -translate-x-1/2 -top-3 w-6 h-6 bg-blue-500 rounded-full cursor-crosshair hover:bg-blue-600 hover:scale-110 transition-all z-10 border-2 border-white shadow-lg opacity-0 group-hover:opacity-100 flex items-center justify-center"
@@ -401,7 +401,7 @@ export function InfinitePinboard({
                         title="Drag to connect to another card"
                         style={{ pointerEvents: 'auto' }}
                       >
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                        <div className="w-2 h-2 bg-foreground rounded-full"></div>
                       </div>
                       <div
                         className="absolute left-1/2 -translate-x-1/2 -bottom-3 w-6 h-6 bg-blue-500 rounded-full cursor-crosshair hover:bg-blue-600 hover:scale-110 transition-all z-10 border-2 border-white shadow-lg opacity-0 group-hover:opacity-100 flex items-center justify-center"
@@ -409,7 +409,7 @@ export function InfinitePinboard({
                         title="Drag to connect to another card"
                         style={{ pointerEvents: 'auto' }}
                       >
-                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                        <div className="w-2 h-2 bg-foreground rounded-full"></div>
                       </div>
                       
                       {/* Visual indicator when this card is a valid drop target */}
@@ -417,11 +417,11 @@ export function InfinitePinboard({
                         <div className="absolute inset-0 border-4 border-blue-400 rounded-lg pointer-events-none animate-pulse bg-blue-50 bg-opacity-20"></div>
                       )}
                       {item.item_type === 'link' ? (
-                        <div className="bg-white rounded-lg shadow-md overflow-hidden border border-gray-200">
+                        <div className="bg-card rounded-lg shadow-md overflow-hidden border border-border">
                           {/* Action buttons for link items with drag handle */}
-                          <div className="drag-handle flex items-center justify-between px-3 py-2 cursor-grab active:cursor-grabbing bg-gray-50 border-b border-gray-200">
+                          <div className="drag-handle flex items-center justify-between px-3 py-2 cursor-grab active:cursor-grabbing bg-muted/50 border-b border-border">
                             <div className="flex items-center gap-2">
-                              <Move className="w-4 h-4 text-gray-400" />
+                              <Move className="w-4 h-4 text-muted-foreground" />
                               {getTypeIcon(item.item_type)}
                               <Button
                                 variant="ghost"
@@ -476,7 +476,7 @@ export function InfinitePinboard({
                           
                           {/* Tags below preview */}
                           {item.tags && item.tags.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5 p-3 border-t border-gray-200 bg-gray-50">
+                            <div className="flex flex-wrap gap-1.5 p-3 border-t border-border bg-muted/50">
                               {item.tags.slice(0, 2).map((tag, tagIndex) => (
                                 <Badge key={tagIndex} variant="secondary" className="text-xs">
                                   {tag}
@@ -495,7 +495,7 @@ export function InfinitePinboard({
                         <CardHeader className="pb-3">
                           <div className="drag-handle flex items-start justify-between gap-2 mb-2 cursor-grab active:cursor-grabbing">
                             <div className="flex items-center gap-2">
-                              <Move className="w-4 h-4 text-gray-400" />
+                              <Move className="w-4 h-4 text-muted-foreground" />
                               {getTypeIcon(item.item_type)}
                               <Button
                                 variant="ghost"
