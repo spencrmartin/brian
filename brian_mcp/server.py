@@ -17,10 +17,10 @@ from typing import Any, Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from brian.database.connection import Database
-from brian.database.repository import KnowledgeRepository, RegionRepository
+from brian.database.repository import KnowledgeRepository, RegionRepository, RegionProfileRepository
 from brian.services.similarity import SimilarityService
 from brian.services.link_preview import fetch_link_metadata, is_google_doc
-from brian.models.knowledge_item import KnowledgeItem, ItemType, Region, RegionType
+from brian.models.knowledge_item import KnowledgeItem, ItemType, Region, RegionType, RegionProfile, ContextStrategy, PROFILE_TEMPLATES
 
 from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions, Server
@@ -44,18 +44,20 @@ server = Server("brian-knowledge")
 # Global repository instances
 repo: Optional[KnowledgeRepository] = None
 region_repo: Optional[RegionRepository] = None
+profile_repo: Optional[RegionProfileRepository] = None
 similarity_service: Optional[SimilarityService] = None
 
 
 def init_services():
     """Initialize database connection and services"""
-    global repo, region_repo, similarity_service
+    global repo, region_repo, profile_repo, similarity_service
     db_path = os.path.expanduser("~/.brian/brian.db")
     db = Database(db_path)
     # Don't call initialize() - it breaks FTS queries in autocommit mode
     # The database should already be initialized by the web app
     repo = KnowledgeRepository(db)
     region_repo = RegionRepository(db)
+    profile_repo = RegionProfileRepository(db)
     similarity_service = SimilarityService()
 
 
@@ -535,6 +537,79 @@ For simple web links without document content:
                     }
                 },
                 "required": ["region_id", "item_ids"]
+            }
+        ),
+        # Profile tools
+        Tool(
+            name="list_profiles",
+            description="List all region profiles. Profiles define AI behavior settings (model, temperature, system prompt, context strategy) that can be assigned to regions.",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        Tool(
+            name="get_profile_templates",
+            description="Get preset profile templates for quick setup. Templates include: code_assistant, research_mode, creative_writing, quick_lookup, documentation.",
+            inputSchema={
+                "type": "object",
+                "properties": {}
+            }
+        ),
+        Tool(
+            name="get_region_profile",
+            description="Get the AI profile assigned to a region. Returns profile settings including model, temperature, system prompt, and context strategy.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "region_id": {
+                        "type": "string",
+                        "description": "ID of the region"
+                    }
+                },
+                "required": ["region_id"]
+            }
+        ),
+        Tool(
+            name="get_context_with_profile",
+            description="Get region context with profile settings applied. Returns items from the region along with recommended AI settings for processing.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "region_id": {
+                        "type": "string",
+                        "description": "ID of the region"
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Optional query to filter/rank items"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum items to return (default: uses profile's max_context_items)",
+                        "default": None
+                    }
+                },
+                "required": ["region_id"]
+            }
+        ),
+        Tool(
+            name="suggest_profile",
+            description="Suggest the most appropriate profile for a query or content type. Analyzes the query to recommend profiles optimized for that type of task.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Query or description of the task"
+                    },
+                    "content_type": {
+                        "type": "string",
+                        "enum": ["code", "research", "creative", "documentation", "general"],
+                        "description": "Optional hint about content type"
+                    }
+                },
+                "required": ["query"]
             }
         ),
     ]
@@ -1250,6 +1325,256 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             "success": True,
             "region": updated_region.to_dict(),
             "added_count": len(item_ids)
+        }
+        
+        return [TextContent(
+            type="text",
+            text=json.dumps(response, indent=2)
+        )]
+    
+    # Profile tool handlers
+    elif name == "list_profiles":
+        profiles = profile_repo.get_all()
+        
+        response = {
+            "count": len(profiles),
+            "profiles": [p.to_dict() for p in profiles]
+        }
+        
+        return [TextContent(
+            type="text",
+            text=json.dumps(response, indent=2)
+        )]
+    
+    elif name == "get_profile_templates":
+        templates = {}
+        for key, profile in PROFILE_TEMPLATES.items():
+            templates[key] = profile.to_dict()
+        
+        response = {
+            "count": len(templates),
+            "templates": templates
+        }
+        
+        return [TextContent(
+            type="text",
+            text=json.dumps(response, indent=2)
+        )]
+    
+    elif name == "get_region_profile":
+        region_id = arguments["region_id"]
+        
+        region = region_repo.get_by_id(region_id)
+        if not region:
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": f"Region {region_id} not found"})
+            )]
+        
+        profile = region_repo.get_profile(region_id)
+        
+        if not profile:
+            response = {
+                "region_id": region_id,
+                "region_name": region.name,
+                "profile": None,
+                "message": "No profile assigned to this region"
+            }
+        else:
+            response = {
+                "region_id": region_id,
+                "region_name": region.name,
+                "profile": profile.to_dict()
+            }
+        
+        return [TextContent(
+            type="text",
+            text=json.dumps(response, indent=2)
+        )]
+    
+    elif name == "get_context_with_profile":
+        region_id = arguments["region_id"]
+        query = arguments.get("query")
+        limit = arguments.get("limit")
+        
+        region = region_repo.get_by_id(region_id)
+        if not region:
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": f"Region {region_id} not found"})
+            )]
+        
+        # Get profile for this region
+        profile = region_repo.get_profile(region_id)
+        
+        # Use profile's max_context_items if no limit specified
+        if limit is None and profile:
+            limit = profile.max_context_items
+        elif limit is None:
+            limit = 20  # Default
+        
+        # Get items in the region
+        items = region_repo.get_items_with_details(region_id)
+        
+        # If query provided, rank items by relevance
+        if query and items:
+            items_dict = [{
+                'id': item.id,
+                'title': item.title,
+                'content': item.content,
+                'tags': item.tags or []
+            } for item in items]
+            
+            similarity_service.build_index(items_dict)
+            query_dict = {'id': 'query', 'title': query, 'content': query, 'tags': []}
+            
+            scored_items = []
+            for item, item_dict in zip(items, items_dict):
+                score = similarity_service.get_similarity_score(query_dict, item_dict)
+                scored_items.append((item, score))
+            
+            scored_items.sort(key=lambda x: x[1], reverse=True)
+            items = [item for item, score in scored_items[:limit]]
+        else:
+            items = items[:limit]
+        
+        # Build response with profile settings
+        response = {
+            "region": {
+                "id": region.id,
+                "name": region.name,
+                "description": region.description
+            },
+            "profile": profile.to_dict() if profile else None,
+            "ai_settings": {
+                "model_provider": profile.model_provider if profile else None,
+                "model_name": profile.model_name if profile else None,
+                "temperature": profile.temperature if profile else 0.7,
+                "system_prompt": profile.system_prompt if profile else None,
+                "context_strategy": profile.context_strategy.value if profile and hasattr(profile.context_strategy, 'value') else "dense_retrieval"
+            },
+            "item_count": len(items),
+            "items": [{
+                "id": item.id,
+                "title": item.title,
+                "content": item.content,
+                "type": str(item.item_type.value) if hasattr(item.item_type, 'value') else str(item.item_type),
+                "tags": item.tags,
+                "url": item.url
+            } for item in items]
+        }
+        
+        return [TextContent(
+            type="text",
+            text=json.dumps(response, indent=2)
+        )]
+    
+    elif name == "suggest_profile":
+        query = arguments["query"]
+        content_type = arguments.get("content_type")
+        
+        # Get all profiles (both saved and templates)
+        saved_profiles = profile_repo.get_all()
+        
+        # Score profiles based on query and content type
+        scored_profiles = []
+        
+        # Keywords for different profile types
+        code_keywords = ["code", "programming", "function", "debug", "implement", "api", "bug", "syntax", "error"]
+        research_keywords = ["research", "analyze", "study", "explore", "investigate", "understand", "compare"]
+        creative_keywords = ["creative", "brainstorm", "idea", "write", "story", "design", "imagine"]
+        doc_keywords = ["document", "documentation", "explain", "guide", "tutorial", "readme", "how to"]
+        
+        query_lower = query.lower()
+        
+        # Score templates
+        for key, template in PROFILE_TEMPLATES.items():
+            score = 0.0
+            
+            # Content type hint
+            if content_type:
+                if content_type == "code" and key == "code_assistant":
+                    score += 0.5
+                elif content_type == "research" and key == "research_mode":
+                    score += 0.5
+                elif content_type == "creative" and key == "creative_writing":
+                    score += 0.5
+                elif content_type == "documentation" and key == "documentation":
+                    score += 0.5
+            
+            # Keyword matching
+            if key == "code_assistant":
+                score += sum(0.1 for kw in code_keywords if kw in query_lower)
+            elif key == "research_mode":
+                score += sum(0.1 for kw in research_keywords if kw in query_lower)
+            elif key == "creative_writing":
+                score += sum(0.1 for kw in creative_keywords if kw in query_lower)
+            elif key == "documentation":
+                score += sum(0.1 for kw in doc_keywords if kw in query_lower)
+            elif key == "quick_lookup":
+                if len(query.split()) <= 5:  # Short queries
+                    score += 0.2
+            
+            if score > 0:
+                scored_profiles.append({
+                    "type": "template",
+                    "key": key,
+                    "profile": template.to_dict(),
+                    "score": score
+                })
+        
+        # Score saved profiles
+        for profile in saved_profiles:
+            score = 0.0
+            
+            # Check name/description match
+            if profile.name and query_lower in profile.name.lower():
+                score += 0.3
+            if profile.description and query_lower in profile.description.lower():
+                score += 0.2
+            
+            if score > 0:
+                scored_profiles.append({
+                    "type": "saved",
+                    "id": profile.id,
+                    "profile": profile.to_dict(),
+                    "score": score
+                })
+        
+        # Sort by score
+        scored_profiles.sort(key=lambda x: x["score"], reverse=True)
+        
+        # If no matches, suggest based on content type or default
+        if not scored_profiles:
+            if content_type == "code":
+                scored_profiles.append({
+                    "type": "template",
+                    "key": "code_assistant",
+                    "profile": PROFILE_TEMPLATES["code_assistant"].to_dict(),
+                    "score": 0.1,
+                    "reason": "Default for code tasks"
+                })
+            elif content_type == "research":
+                scored_profiles.append({
+                    "type": "template",
+                    "key": "research_mode",
+                    "profile": PROFILE_TEMPLATES["research_mode"].to_dict(),
+                    "score": 0.1,
+                    "reason": "Default for research tasks"
+                })
+            else:
+                scored_profiles.append({
+                    "type": "template",
+                    "key": "quick_lookup",
+                    "profile": PROFILE_TEMPLATES["quick_lookup"].to_dict(),
+                    "score": 0.1,
+                    "reason": "General purpose default"
+                })
+        
+        response = {
+            "query": query,
+            "content_type": content_type,
+            "suggestions": scored_profiles[:3]
         }
         
         return [TextContent(

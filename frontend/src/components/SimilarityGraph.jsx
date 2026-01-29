@@ -12,8 +12,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Loader2, Tag, Info, Link as LinkIcon, FileText, Code2, FileCode, Map as MapIcon, Eye, EyeOff, Pencil, Trash2, Plus, Check } from 'lucide-react'
+import { Loader2, Tag, Info, Link as LinkIcon, FileText, Code2, FileCode, Map as MapIcon, Eye, EyeOff, Pencil, Trash2, Plus, Check, Settings2, Brain, Sparkles } from 'lucide-react'
 import { useStore } from '@/store/useStore'
+import { RegionEditDialog } from './RegionEditDialog'
 
 // Predefined color palette for regions
 const REGION_COLORS = [
@@ -236,6 +237,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     regions, 
     fetchRegions, 
     createRegion,
+    updateRegion,
     toggleRegionVisibility,
     deleteRegion,
     regionsLoading 
@@ -248,6 +250,13 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
   const [newRegionColor, setNewRegionColor] = useState(REGION_COLORS[0])
   const [selectedItemIds, setSelectedItemIds] = useState([])
   const [isCreatingRegion, setIsCreatingRegion] = useState(false)
+  
+  // Edit Region dialog state
+  const [showEditRegionDialog, setShowEditRegionDialog] = useState(false)
+  const [editingRegion, setEditingRegion] = useState(null)
+  
+  // Region profiles cache (to show profile names in popover)
+  const [regionProfiles, setRegionProfiles] = useState({})
   
   // Store node positions for region hull calculation
   const nodePositionsRef = useRef(new Map())
@@ -374,6 +383,48 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
   useEffect(() => {
     fetchRegions()
   }, [fetchRegions])
+
+  // Fetch profile for a specific region
+  const fetchProfileForRegion = useCallback(async (regionId) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/v1/regions/${regionId}/profile`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.profile) {
+          setRegionProfiles(prev => ({
+            ...prev,
+            [regionId]: data.profile
+          }))
+          return data.profile
+        }
+      }
+      // If no profile, clear from cache
+      setRegionProfiles(prev => {
+        const updated = { ...prev }
+        delete updated[regionId]
+        return updated
+      })
+      return null
+    } catch (error) {
+      console.error(`Failed to fetch profile for region ${regionId}:`, error)
+      return null
+    }
+  }, [])
+
+  // Fetch profile details for regions that have profiles
+  useEffect(() => {
+    const fetchProfilesForRegions = async () => {
+      const regionsWithProfiles = regions.filter(r => r.profile_id && !regionProfiles[r.id])
+      
+      for (const region of regionsWithProfiles) {
+        await fetchProfileForRegion(region.id)
+      }
+    }
+    
+    if (regions.length > 0) {
+      fetchProfilesForRegions()
+    }
+  }, [regions, fetchProfileForRegion])
 
   // Handle opening the create region dialog
   const handleOpenCreateRegion = useCallback(() => {
@@ -911,6 +962,19 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
                         className="h-7 w-7"
                         onClick={(e) => {
                           e.stopPropagation()
+                          setEditingRegion(region)
+                          setShowEditRegionDialog(true)
+                        }}
+                        title="Edit region & AI profile"
+                      >
+                        <Settings2 className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={(e) => {
+                          e.stopPropagation()
                           toggleRegionVisibility(region.id)
                         }}
                         title={region.is_visible ? 'Hide region' : 'Show region'}
@@ -944,7 +1008,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
                     </p>
                   )}
                   
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <Badge variant="secondary" className="text-xs">
                       {region.item_count} item{region.item_count !== 1 ? 's' : ''}
                     </Badge>
@@ -952,6 +1016,63 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
                       {region.region_type}
                     </Badge>
                   </div>
+                  
+                  {/* Profile Pill - shows when profile is assigned */}
+                  {region.profile_id && regionProfiles[region.id] && (
+                    <div 
+                      className="mt-2 p-2 rounded-lg border flex items-center gap-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                      style={{ borderColor: `${region.color}40`, backgroundColor: `${region.color}10` }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingRegion(region)
+                        setShowEditRegionDialog(true)
+                      }}
+                    >
+                      <Brain className="w-4 h-4 flex-shrink-0" style={{ color: region.color }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{regionProfiles[region.id].name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-muted-foreground">
+                            {regionProfiles[region.id].context_strategy?.replace('_', ' ')}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">•</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            T: {regionProfiles[region.id].temperature}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">•</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {regionProfiles[region.id].max_context_items} items
+                          </span>
+                        </div>
+                      </div>
+                      <Settings2 className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                    </div>
+                  )}
+                  
+                  {/* Loading state for profile */}
+                  {region.profile_id && !regionProfiles[region.id] && (
+                    <div className="mt-2 p-2 rounded-lg border flex items-center gap-2" style={{ borderColor: `${region.color}40` }}>
+                      <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Loading profile...</span>
+                    </div>
+                  )}
+                  
+                  {/* Quick Add Profile Button - shows when no profile assigned */}
+                  {!region.profile_id && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full mt-2 text-xs gap-1 h-7"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingRegion(region)
+                        setShowEditRegionDialog(true)
+                      }}
+                    >
+                      <Sparkles className="w-3 h-3" />
+                      Add AI Profile
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
@@ -1293,6 +1414,29 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
           </div>
         </>
       )}
+
+      {/* Edit Region Dialog */}
+      <RegionEditDialog
+        open={showEditRegionDialog}
+        onOpenChange={setShowEditRegionDialog}
+        region={editingRegion}
+        items={items}
+        onSave={async (updatedRegion) => {
+          await updateRegion(updatedRegion.id, {
+            name: updatedRegion.name,
+            description: updatedRegion.description,
+            color: updatedRegion.color,
+            item_ids: updatedRegion.item_ids
+          })
+          fetchRegions()
+        }}
+        onProfileChange={async (regionId) => {
+          // Re-fetch the profile for this region to update the cache
+          await fetchProfileForRegion(regionId)
+          // Also refresh regions to get updated profile_id
+          fetchRegions()
+        }}
+      />
     </div>
   )
 }

@@ -2,7 +2,7 @@
 Database schema for brian - inspired by Goose's SQLite architecture
 """
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 # Schema creation SQL statements
 SCHEMA_SQL = """
@@ -77,6 +77,24 @@ CREATE TABLE IF NOT EXISTS link_metadata (
     FOREIGN KEY (item_id) REFERENCES knowledge_items(id) ON DELETE CASCADE
 );
 
+-- Region profiles - reusable configuration templates for AI behavior
+CREATE TABLE IF NOT EXISTS region_profiles (
+    id TEXT PRIMARY KEY,  -- UUID
+    name TEXT NOT NULL,  -- e.g., "Code Assistant", "Research Mode"
+    description TEXT,
+    model_provider TEXT,  -- e.g., "openai", "anthropic", "google"
+    model_name TEXT,  -- e.g., "gpt-4o", "claude-sonnet-4", "gemini-pro"
+    temperature REAL DEFAULT 0.7,
+    system_prompt TEXT,  -- Custom system prompt for this profile
+    context_strategy TEXT DEFAULT 'dense_retrieval',  -- 'full', 'dense_retrieval', 'hierarchical', 'recency_weighted', 'graph_traversal'
+    max_context_items INTEGER DEFAULT 20,  -- Limit items in context window
+    tools_config TEXT,  -- JSON: enabled/disabled tools, tool-specific settings
+    recipe_path TEXT,  -- Path to associated recipe file
+    is_default BOOLEAN DEFAULT FALSE,  -- Mark as default profile
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Knowledge regions for spatial grouping of nodes in graph view
 CREATE TABLE IF NOT EXISTS regions (
     id TEXT PRIMARY KEY,  -- UUID
@@ -86,8 +104,10 @@ CREATE TABLE IF NOT EXISTS regions (
     region_type TEXT NOT NULL DEFAULT 'manual',  -- 'manual', 'tag-based', 'cluster', 'smart'
     bounds_json TEXT,  -- JSON: polygon points, bounding box, or other geometry
     is_visible BOOLEAN DEFAULT TRUE,  -- Toggle visibility in graph
+    profile_id TEXT,  -- Associated region profile
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (profile_id) REFERENCES region_profiles(id) ON DELETE SET NULL
 );
 
 -- Junction table for region-item membership (many-to-many)
@@ -121,8 +141,11 @@ CREATE INDEX IF NOT EXISTS idx_connections_source ON connections(source_item_id)
 CREATE INDEX IF NOT EXISTS idx_connections_target ON connections(target_item_id);
 CREATE INDEX IF NOT EXISTS idx_regions_type ON regions(region_type);
 CREATE INDEX IF NOT EXISTS idx_regions_visible ON regions(is_visible);
+CREATE INDEX IF NOT EXISTS idx_regions_profile ON regions(profile_id);
 CREATE INDEX IF NOT EXISTS idx_region_items_region ON region_items(region_id);
 CREATE INDEX IF NOT EXISTS idx_region_items_item ON region_items(item_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_default ON region_profiles(is_default);
+CREATE INDEX IF NOT EXISTS idx_profiles_name ON region_profiles(name);
 
 -- Triggers for updated_at timestamp
 CREATE TRIGGER IF NOT EXISTS update_knowledge_items_timestamp 
@@ -152,6 +175,14 @@ CREATE TRIGGER IF NOT EXISTS update_regions_timestamp
 AFTER UPDATE ON regions
 BEGIN
     UPDATE regions SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.id;
+END;
+
+-- Trigger for region_profiles updated_at timestamp
+CREATE TRIGGER IF NOT EXISTS update_region_profiles_timestamp 
+AFTER UPDATE ON region_profiles
+BEGIN
+    UPDATE region_profiles SET updated_at = CURRENT_TIMESTAMP
     WHERE id = NEW.id;
 END;
 """

@@ -5,7 +5,11 @@ from typing import List, Optional, Dict
 from datetime import datetime
 
 from .connection import Database
-from ..models import KnowledgeItem, Tag, Connection, ItemType, Region, RegionType
+from ..models import (
+    KnowledgeItem, Tag, Connection, ItemType, 
+    Region, RegionType, 
+    RegionProfile, ContextStrategy, PROFILE_TEMPLATES
+)
 
 
 class KnowledgeRepository:
@@ -561,3 +565,165 @@ class RegionRepository:
             items.append(KnowledgeItem.from_db_row(dict(row), tags))
         
         return items
+    
+    def get_profile(self, region_id: str) -> Optional[RegionProfile]:
+        """Get the profile assigned to a region"""
+        query = """
+            SELECT rp.* FROM region_profiles rp
+            JOIN regions r ON r.profile_id = rp.id
+            WHERE r.id = ?
+        """
+        row = self.db.fetchone(query, (region_id,))
+        if not row:
+            return None
+        return RegionProfile.from_db_row(dict(row))
+    
+    def set_profile(self, region_id: str, profile_id: Optional[str]) -> bool:
+        """Assign a profile to a region (or remove with None)"""
+        query = "UPDATE regions SET profile_id = ? WHERE id = ?"
+        cursor = self.db.execute(query, (profile_id, region_id))
+        return cursor.rowcount > 0
+
+
+class RegionProfileRepository:
+    """Repository for region profile operations"""
+    
+    def __init__(self, db: Database):
+        self.db = db
+    
+    def create(self, profile: RegionProfile) -> RegionProfile:
+        """Create a new region profile"""
+        query = """
+            INSERT INTO region_profiles
+            (id, name, description, model_provider, model_name, temperature,
+             system_prompt, context_strategy, max_context_items, tools_config, 
+             recipe_path, is_default)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        self.db.execute(query, (
+            profile.id,
+            profile.name,
+            profile.description,
+            profile.model_provider,
+            profile.model_name,
+            profile.temperature,
+            profile.system_prompt,
+            profile.context_strategy.value if isinstance(profile.context_strategy, ContextStrategy) else profile.context_strategy,
+            profile.max_context_items,
+            profile.tools_config,
+            profile.recipe_path,
+            profile.is_default
+        ))
+        return self.get_by_id(profile.id)
+    
+    def get_by_id(self, profile_id: str) -> Optional[RegionProfile]:
+        """Get region profile by ID"""
+        query = "SELECT * FROM region_profiles WHERE id = ?"
+        row = self.db.fetchone(query, (profile_id,))
+        if not row:
+            return None
+        return RegionProfile.from_db_row(dict(row))
+    
+    def get_by_name(self, name: str) -> Optional[RegionProfile]:
+        """Get region profile by name"""
+        query = "SELECT * FROM region_profiles WHERE name = ?"
+        row = self.db.fetchone(query, (name,))
+        if not row:
+            return None
+        return RegionProfile.from_db_row(dict(row))
+    
+    def get_all(self) -> List[RegionProfile]:
+        """Get all region profiles"""
+        query = "SELECT * FROM region_profiles ORDER BY name"
+        rows = self.db.fetchall(query)
+        return [RegionProfile.from_db_row(dict(row)) for row in rows]
+    
+    def update(self, profile: RegionProfile) -> RegionProfile:
+        """Update a region profile"""
+        query = """
+            UPDATE region_profiles
+            SET name = ?, description = ?, model_provider = ?, model_name = ?, 
+                temperature = ?, system_prompt = ?, context_strategy = ?, 
+                max_context_items = ?, tools_config = ?, recipe_path = ?, is_default = ?
+            WHERE id = ?
+        """
+        self.db.execute(query, (
+            profile.name,
+            profile.description,
+            profile.model_provider,
+            profile.model_name,
+            profile.temperature,
+            profile.system_prompt,
+            profile.context_strategy.value if isinstance(profile.context_strategy, ContextStrategy) else profile.context_strategy,
+            profile.max_context_items,
+            profile.tools_config,
+            profile.recipe_path,
+            profile.is_default,
+            profile.id
+        ))
+        return self.get_by_id(profile.id)
+    
+    def delete(self, profile_id: str) -> bool:
+        """Delete a region profile"""
+        query = "DELETE FROM region_profiles WHERE id = ?"
+        cursor = self.db.execute(query, (profile_id,))
+        return cursor.rowcount > 0
+    
+    def get_default(self) -> Optional[RegionProfile]:
+        """Get the default profile"""
+        query = "SELECT * FROM region_profiles WHERE is_default = 1"
+        row = self.db.fetchone(query)
+        if row:
+            return RegionProfile.from_db_row(dict(row))
+        return None
+    
+    def set_default(self, profile_id: str) -> bool:
+        """Set a profile as the default (unsets any existing default)"""
+        # First, unset any existing default
+        self.db.execute("UPDATE region_profiles SET is_default = 0 WHERE is_default = 1")
+        # Set the new default
+        query = "UPDATE region_profiles SET is_default = 1 WHERE id = ?"
+        cursor = self.db.execute(query, (profile_id,))
+        return cursor.rowcount > 0
+    
+    def create_from_template(self, template_key: str, name: Optional[str] = None) -> Optional[RegionProfile]:
+        """Create a new profile from a preset template"""
+        if template_key not in PROFILE_TEMPLATES:
+            return None
+        
+        template = PROFILE_TEMPLATES[template_key]
+        
+        # Create a new profile based on the template
+        profile = RegionProfile(
+            name=name or template.name,
+            description=template.description,
+            model_provider=template.model_provider,
+            model_name=template.model_name,
+            temperature=template.temperature,
+            system_prompt=template.system_prompt,
+            context_strategy=template.context_strategy,
+            max_context_items=template.max_context_items,
+            tools_config=template.tools_config,
+            recipe_path=template.recipe_path,
+        )
+        
+        return self.create(profile)
+    
+    def get_regions_using_profile(self, profile_id: str) -> List[Region]:
+        """Get all regions that use a specific profile"""
+        query = """
+            SELECT r.* FROM regions r
+            WHERE r.profile_id = ?
+            ORDER BY r.name
+        """
+        rows = self.db.fetchall(query, (profile_id,))
+        
+        regions = []
+        for row in rows:
+            # Get item IDs for each region
+            items_query = "SELECT item_id FROM region_items WHERE region_id = ?"
+            item_rows = self.db.fetchall(items_query, (row['id'],))
+            item_ids = [ir['item_id'] for ir in item_rows]
+            regions.append(Region.from_db_row(dict(row), item_ids))
+        
+        return regions

@@ -46,6 +46,38 @@ MIGRATIONS = {
                UPDATE regions SET updated_at = CURRENT_TIMESTAMP
                WHERE id = NEW.id;
            END""",
+    ],
+    5: [
+        # Add region profiles for AI behavior configuration
+        """CREATE TABLE IF NOT EXISTS region_profiles (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            model_provider TEXT,
+            model_name TEXT,
+            temperature REAL DEFAULT 0.7,
+            system_prompt TEXT,
+            context_strategy TEXT DEFAULT 'dense_retrieval',
+            max_context_items INTEGER DEFAULT 20,
+            tools_config TEXT,
+            recipe_path TEXT,
+            is_default BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+        # Add profile_id to regions table
+        "ALTER TABLE regions ADD COLUMN profile_id TEXT REFERENCES region_profiles(id) ON DELETE SET NULL",
+        # Indexes for region_profiles
+        "CREATE INDEX IF NOT EXISTS idx_profiles_default ON region_profiles(is_default)",
+        "CREATE INDEX IF NOT EXISTS idx_profiles_name ON region_profiles(name)",
+        "CREATE INDEX IF NOT EXISTS idx_regions_profile ON regions(profile_id)",
+        # Trigger for region_profiles updated_at
+        """CREATE TRIGGER IF NOT EXISTS update_region_profiles_timestamp 
+           AFTER UPDATE ON region_profiles
+           BEGIN
+               UPDATE region_profiles SET updated_at = CURRENT_TIMESTAMP
+               WHERE id = NEW.id;
+           END""",
     ]
 }
 
