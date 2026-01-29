@@ -18,9 +18,62 @@ import {
   Archive,
   ChevronRight,
   Loader2,
-  FolderOpen
+  FolderOpen,
+  Globe,
+  Folder,
+  Lightbulb,
+  Rocket,
+  BookOpen,
+  Target,
+  FlaskConical,
+  Palette,
+  Code,
+  BarChart3,
+  Brain,
+  Heart,
+  Star,
+  Zap,
+  Coffee,
+  Music
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+
+// Icon mapping for projects - uses Lucide icon names
+const ICON_MAP = {
+  'globe': Globe,
+  'folder': Folder,
+  'database': Database,
+  'lightbulb': Lightbulb,
+  'rocket': Rocket,
+  'book': BookOpen,
+  'target': Target,
+  'flask': FlaskConical,
+  'palette': Palette,
+  'code': Code,
+  'chart': BarChart3,
+  'brain': Brain,
+  'heart': Heart,
+  'star': Star,
+  'zap': Zap,
+  'coffee': Coffee,
+  'music': Music,
+}
+
+// Get icon component from icon name
+const getIconComponent = (iconName) => {
+  if (!iconName) return Folder
+  // Check if it's a Lucide icon name
+  const Icon = ICON_MAP[iconName.toLowerCase()]
+  if (Icon) return Icon
+  // Fallback to Folder
+  return Folder
+}
+
+// Check if icon is a Lucide icon (not emoji)
+const isLucideIcon = (iconName) => {
+  if (!iconName) return false
+  return ICON_MAP.hasOwnProperty(iconName.toLowerCase())
+}
 
 export function ProjectSelector() {
   const {
@@ -40,7 +93,7 @@ export function ProjectSelector() {
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectDescription, setNewProjectDescription] = useState('')
   const [newProjectColor, setNewProjectColor] = useState('#6366f1')
-  const [newProjectIcon, setNewProjectIcon] = useState('📁')
+  const [newProjectIcon, setNewProjectIcon] = useState('folder')
   
   const panelRef = useRef(null)
   const buttonRef = useRef(null)
@@ -128,7 +181,7 @@ export function ProjectSelector() {
       setNewProjectName('')
       setNewProjectDescription('')
       setNewProjectColor('#6366f1')
-      setNewProjectIcon('📁')
+      setNewProjectIcon('folder')
       // Optionally switch to the new project
       await switchProject(project.id)
     }
@@ -147,7 +200,39 @@ export function ProjectSelector() {
     '#6b7280', // Gray
   ]
 
-  const iconOptions = ['📁', '🪿', '💡', '🚀', '📚', '🎯', '🔬', '🎨', '💻', '📊']
+  // Lucide icon options for projects
+  const iconOptions = [
+    { name: 'globe', Icon: Globe },
+    { name: 'folder', Icon: Folder },
+    { name: 'database', Icon: Database },
+    { name: 'lightbulb', Icon: Lightbulb },
+    { name: 'rocket', Icon: Rocket },
+    { name: 'book', Icon: BookOpen },
+    { name: 'target', Icon: Target },
+    { name: 'flask', Icon: FlaskConical },
+    { name: 'palette', Icon: Palette },
+    { name: 'code', Icon: Code },
+    { name: 'chart', Icon: BarChart3 },
+    { name: 'brain', Icon: Brain },
+    { name: 'heart', Icon: Heart },
+    { name: 'star', Icon: Star },
+    { name: 'zap', Icon: Zap },
+    { name: 'coffee', Icon: Coffee },
+  ]
+
+  // Render project icon - handles both Lucide icons and legacy emojis
+  const renderProjectIcon = (iconName, size = 'w-5 h-5') => {
+    if (!iconName) {
+      return <Folder className={size} />
+    }
+    // Check if it's a Lucide icon
+    if (isLucideIcon(iconName)) {
+      const IconComponent = getIconComponent(iconName)
+      return <IconComponent className={size} />
+    }
+    // Fallback to emoji display for legacy data
+    return <span className="text-base">{iconName}</span>
+  }
 
   return (
     <>
@@ -166,11 +251,7 @@ export function ProjectSelector() {
             borderColor: currentProject.color,
           } : {}}
         >
-          {currentProject?.icon ? (
-            <span className="text-lg">{currentProject.icon}</span>
-          ) : (
-            <Database className="w-5 h-5" />
-          )}
+          {renderProjectIcon(currentProject?.icon, 'w-5 h-5')}
         </Button>
         
         {/* Tooltip */}
@@ -241,8 +322,8 @@ export function ProjectSelector() {
                       />
                       
                       {/* Project Icon */}
-                      <span className="text-base flex-shrink-0">
-                        {project.icon || '📁'}
+                      <span className="flex-shrink-0">
+                        {renderProjectIcon(project.icon, 'w-4 h-4')}
                       </span>
                       
                       {/* Project Info */}
@@ -329,10 +410,10 @@ export function ProjectSelector() {
             <div className="flex items-center gap-4">
               {/* Icon Preview */}
               <div 
-                className="w-16 h-16 rounded-lg flex items-center justify-center text-3xl border-2"
+                className="w-16 h-16 rounded-lg flex items-center justify-center border-2"
                 style={{ borderColor: newProjectColor, backgroundColor: `${newProjectColor}20` }}
               >
-                {newProjectIcon}
+                {renderProjectIcon(newProjectIcon, 'w-8 h-8')}
               </div>
               
               <div className="flex-1 space-y-2">
@@ -340,15 +421,16 @@ export function ProjectSelector() {
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Icon</label>
                   <div className="flex gap-1 flex-wrap">
-                    {iconOptions.map((icon) => (
+                    {iconOptions.map(({ name, Icon }) => (
                       <button
-                        key={icon}
+                        key={name}
                         className={`w-7 h-7 rounded flex items-center justify-center hover:bg-muted transition-colors ${
-                          newProjectIcon === icon ? 'bg-muted ring-2 ring-primary' : ''
+                          newProjectIcon === name ? 'bg-muted ring-2 ring-primary' : ''
                         }`}
-                        onClick={() => setNewProjectIcon(icon)}
+                        onClick={() => setNewProjectIcon(name)}
+                        title={name}
                       >
-                        {icon}
+                        <Icon className="w-4 h-4" />
                       </button>
                     ))}
                   </div>

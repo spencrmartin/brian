@@ -170,7 +170,7 @@ def _migrate_to_default_project(cursor):
         "General",
         "General knowledge base",
         "#8b5cf6",
-        "🌐",
+        "globe",  # Lucide icon name
         True,  # is_default
         False  # is_archived
     ))
