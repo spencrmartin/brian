@@ -199,6 +199,7 @@ class Region:
     bounds_json: Optional[str] = None  # JSON string for polygon/bounds
     is_visible: bool = True
     item_ids: List[str] = field(default_factory=list)  # Items in this region
+    profile_id: Optional[str] = None  # Associated region profile
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     
@@ -214,6 +215,7 @@ class Region:
             "is_visible": self.is_visible,
             "item_ids": self.item_ids,
             "item_count": len(self.item_ids),
+            "profile_id": self.profile_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -247,6 +249,7 @@ class Region:
             bounds_json=row.get('bounds_json'),
             is_visible=bool(row.get('is_visible', True)),
             item_ids=item_ids or [],
+            profile_id=row.get('profile_id'),
             created_at=datetime.fromisoformat(row['created_at']) if row.get('created_at') else None,
             updated_at=datetime.fromisoformat(row['updated_at']) if row.get('updated_at') else None,
         )
