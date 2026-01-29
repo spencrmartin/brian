@@ -30,6 +30,11 @@ export const useStore = create((set, get) => ({
   selectedRegion: null,
   regionsLoading: false,
   
+  // Projects state
+  projects: [],
+  currentProject: null,
+  projectsLoading: false,
+  
   // UI state
   currentView: 'feed',
   isModalOpen: false,
@@ -56,7 +61,13 @@ export const useStore = create((set, get) => ({
   fetchItems: async () => {
     set({ loading: true, error: null })
     try {
-      const items = await api.getItems(get().filters)
+      const currentProject = get().currentProject
+      const filters = { ...get().filters }
+      // Add project_id filter if we have a current project
+      if (currentProject?.id) {
+        filters.project_id = currentProject.id
+      }
+      const items = await api.getItems(filters)
       set({ items, loading: false })
     } catch (error) {
       set({ error: error.message, loading: false })
@@ -172,7 +183,13 @@ export const useStore = create((set, get) => ({
   fetchRegions: async (filters = {}) => {
     set({ regionsLoading: true })
     try {
-      const regions = await api.getRegions(filters)
+      const currentProject = get().currentProject
+      const regionFilters = { ...filters }
+      // Add project_id filter if we have a current project
+      if (currentProject?.id) {
+        regionFilters.project_id = currentProject.id
+      }
+      const regions = await api.getRegions(regionFilters)
       set({ regions, regionsLoading: false })
     } catch (error) {
       console.error('Failed to fetch regions:', error)
@@ -293,6 +310,139 @@ export const useStore = create((set, get) => ({
     } catch (error) {
       console.error('Failed to get item regions:', error)
       return []
+    }
+  },
+
+  // ============================================================================
+  // Project Actions
+  // ============================================================================
+
+  // Fetch all projects
+  fetchProjects: async (includeArchived = false) => {
+    set({ projectsLoading: true })
+    try {
+      const projects = await api.getProjects(includeArchived)
+      set({ projects, projectsLoading: false })
+    } catch (error) {
+      console.error('Failed to fetch projects:', error)
+      set({ projectsLoading: false })
+    }
+  },
+
+  // Fetch current/default project
+  fetchCurrentProject: async () => {
+    try {
+      const project = await api.getDefaultProject()
+      set({ currentProject: project })
+      // Store in localStorage for persistence
+      localStorage.setItem('brian_current_project', project.id)
+      return project
+    } catch (error) {
+      console.error('Failed to fetch current project:', error)
+      return null
+    }
+  },
+
+  // Switch to a different project
+  switchProject: async (projectId) => {
+    set({ projectsLoading: true })
+    try {
+      await api.setDefaultProject(projectId)
+      await api.updateProjectAccess(projectId)
+      const project = await api.getProject(projectId)
+      set({ currentProject: project, projectsLoading: false })
+      // Store in localStorage for persistence
+      localStorage.setItem('brian_current_project', projectId)
+      // Refresh items for the new project context
+      await get().fetchItems()
+      await get().fetchRegions()
+      await get().fetchStats()
+      return project
+    } catch (error) {
+      console.error('Failed to switch project:', error)
+      set({ projectsLoading: false })
+      return null
+    }
+  },
+
+  // Create a new project
+  createProject: async (data) => {
+    set({ projectsLoading: true })
+    try {
+      const project = await api.createProject(data)
+      await get().fetchProjects()
+      set({ projectsLoading: false })
+      return project
+    } catch (error) {
+      console.error('Failed to create project:', error)
+      set({ projectsLoading: false })
+      return null
+    }
+  },
+
+  // Update a project
+  updateProject: async (id, data) => {
+    try {
+      const project = await api.updateProject(id, data)
+      await get().fetchProjects()
+      // Update currentProject if it's the one being updated
+      if (get().currentProject?.id === id) {
+        set({ currentProject: project })
+      }
+      return project
+    } catch (error) {
+      console.error('Failed to update project:', error)
+      return null
+    }
+  },
+
+  // Delete a project
+  deleteProject: async (id) => {
+    try {
+      await api.deleteProject(id)
+      await get().fetchProjects()
+      // If deleted project was current, switch to default
+      if (get().currentProject?.id === id) {
+        await get().fetchCurrentProject()
+      }
+      return true
+    } catch (error) {
+      console.error('Failed to delete project:', error)
+      return false
+    }
+  },
+
+  // Archive a project
+  archiveProject: async (id) => {
+    try {
+      await api.archiveProject(id)
+      await get().fetchProjects()
+      return true
+    } catch (error) {
+      console.error('Failed to archive project:', error)
+      return false
+    }
+  },
+
+  // Unarchive a project
+  unarchiveProject: async (id) => {
+    try {
+      await api.unarchiveProject(id)
+      await get().fetchProjects()
+      return true
+    } catch (error) {
+      console.error('Failed to unarchive project:', error)
+      return false
+    }
+  },
+
+  // Get project stats
+  getProjectStats: async (id) => {
+    try {
+      return await api.getProjectStats(id)
+    } catch (error) {
+      console.error('Failed to get project stats:', error)
+      return null
     }
   },
 }))

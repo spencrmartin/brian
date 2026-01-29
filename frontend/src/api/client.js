@@ -44,6 +44,7 @@ class BrianAPI {
     if (filters.offset) params.append('offset', filters.offset)
     if (filters.sort_by) params.append('sort_by', filters.sort_by)
     if (filters.sort_order) params.append('sort_order', filters.sort_order)
+    if (filters.project_id) params.append('project_id', filters.project_id)
 
     const query = params.toString() ? `?${params.toString()}` : ''
     return this.request(`/items${query}`)
@@ -147,6 +148,7 @@ class BrianAPI {
     if (filters.visible_only) params.append('visible_only', 'true')
     if (filters.limit) params.append('limit', filters.limit)
     if (filters.offset) params.append('offset', filters.offset)
+    if (filters.project_id) params.append('project_id', filters.project_id)
 
     const query = params.toString() ? `?${params.toString()}` : ''
     return this.request(`/regions${query}`)
@@ -201,6 +203,73 @@ class BrianAPI {
 
   async getItemRegions(itemId) {
     return this.request(`/items/${itemId}/regions`)
+  }
+
+  // ============================================================================
+  // Projects (Knowledge Bases)
+  // ============================================================================
+
+  async getProjects(includeArchived = false) {
+    const params = new URLSearchParams()
+    if (includeArchived) params.append('include_archived', 'true')
+    const query = params.toString() ? `?${params.toString()}` : ''
+    return this.request(`/projects${query}`)
+  }
+
+  async getProject(id) {
+    return this.request(`/projects/${id}`)
+  }
+
+  async getDefaultProject() {
+    return this.request('/projects/default')
+  }
+
+  async getProjectStats(id) {
+    return this.request(`/projects/${id}/stats`)
+  }
+
+  async createProject(data) {
+    return this.request('/projects', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateProject(id, data) {
+    return this.request(`/projects/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteProject(id) {
+    return this.request(`/projects/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
+  async setDefaultProject(id) {
+    return this.request(`/projects/${id}/default`, {
+      method: 'POST',
+    })
+  }
+
+  async archiveProject(id) {
+    return this.request(`/projects/${id}/archive`, {
+      method: 'POST',
+    })
+  }
+
+  async unarchiveProject(id) {
+    return this.request(`/projects/${id}/unarchive`, {
+      method: 'POST',
+    })
+  }
+
+  async updateProjectAccess(id) {
+    return this.request(`/projects/${id}/access`, {
+      method: 'POST',
+    })
   }
 }
 

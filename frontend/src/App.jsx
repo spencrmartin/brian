@@ -9,6 +9,7 @@ import { NewItemDialog } from '@/components/NewItemDialog'
 import { EditItemDialog } from '@/components/EditItemDialog'
 import { DeleteConfirmDialog } from '@/components/DeleteConfirmDialog'
 import { BrainLogo } from '@/components/BrainLogo'
+import { ProjectSelector } from '@/components/ProjectSelector'
 import { SimilarityGraph } from '@/components/SimilarityGraph'
 import { InfinitePinboard } from '@/components/InfinitePinboard'
 import { Timeline } from '@/components/Timeline'
@@ -175,6 +176,9 @@ function App() {
             <BrainLogo className="w-6 h-6 text-white" />
           </Button>
         </div>
+
+        {/* Project Selector Button */}
+        <ProjectSelector />
 
         {/* Feed Button */}
         <div className="group relative">
