@@ -387,23 +387,24 @@ export function ProjectSelector() {
           } ${viewAllProjects ? 'text-indigo-200' : 'text-muted-foreground'}`} />
         </button>
         
-        {/* Keyboard Shortcut Hint */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
-          <kbd className="px-1.5 py-0.5 bg-white/20 rounded">⌘P</kbd>
-        </div>
-      </div>
-
-      {/* Project Selector Dropdown Panel - Positioned relative to button */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            ref={panelRef}
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-80 bg-card border rounded-lg shadow-xl overflow-hidden"
-          >
+        {/* Keyboard Shortcut Hint - only show when dropdown is closed */}
+        {!isOpen && (
+          <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+            <kbd className="px-1.5 py-0.5 bg-white/20 rounded">⌘P</kbd>
+          </div>
+        )}
+        
+        {/* Project Selector Dropdown Panel - Positioned relative to button container */}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              ref={panelRef}
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-80 bg-card border rounded-lg shadow-xl overflow-hidden"
+            >
             {/* Header */}
             <div className="p-3 border-b bg-muted/50">
               <div className="flex items-center gap-2 mb-2">
