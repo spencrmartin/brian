@@ -353,16 +353,18 @@ async def get_stats():
 @router.get("/similarity/connections", response_model=List[dict])
 async def get_similarity_connections(
     threshold: float = Query(0.15, ge=0.0, le=1.0, description="Minimum similarity score"),
-    max_per_item: int = Query(5, ge=1, le=20, description="Max connections per item")
+    max_per_item: int = Query(5, ge=1, le=20, description="Max connections per item"),
+    project_id: Optional[str] = Query(None, description="Filter to items in a specific project")
 ):
     """
     Compute content similarity connections between all items
     Uses TF-IDF and cosine similarity
+    Optionally scoped to a specific project
     """
     repo, _, _, _, _, _ = get_repositories()
     
-    # Get all items
-    items = repo.get_all(limit=1000)
+    # Get items (optionally filtered by project)
+    items = repo.get_all(limit=1000, project_id=project_id)
     items_dict = [item.to_dict() for item in items]
     
     # Compute similarities

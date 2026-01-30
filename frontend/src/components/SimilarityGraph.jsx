@@ -233,7 +233,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
   const [showRegionsPanel, setShowRegionsPanel] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   
-  // Region state from store
+  // Region and project state from store
   const { 
     regions, 
     fetchRegions, 
@@ -241,7 +241,8 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     updateRegion,
     toggleRegionVisibility,
     deleteRegion,
-    regionsLoading 
+    regionsLoading,
+    currentProject
   } = useStore()
   
   // Create Region dialog state
@@ -359,12 +360,17 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
       .attr('stroke', '#999')
   }
 
-  // Fetch similarity connections from API
+  // Fetch similarity connections from API (scoped to current project)
   useEffect(() => {
     const fetchConnections = async () => {
       try {
         setLoading(true)
-        const response = await fetch('http://localhost:8080/api/v1/similarity/connections?threshold=0.15&max_per_item=5')
+        // Build URL with project_id filter if a project is selected
+        let url = 'http://localhost:8080/api/v1/similarity/connections?threshold=0.15&max_per_item=5'
+        if (currentProject?.id) {
+          url += `&project_id=${currentProject.id}`
+        }
+        const response = await fetch(url)
         const data = await response.json()
         setConnections(data)
       } catch (error) {
@@ -378,7 +384,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     if (items && items.length > 0) {
       fetchConnections()
     }
-  }, [items])
+  }, [items, currentProject?.id])
 
   // Fetch regions when component mounts
   useEffect(() => {
