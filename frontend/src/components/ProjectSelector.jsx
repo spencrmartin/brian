@@ -216,10 +216,13 @@ export function ProjectSelector() {
   })
 
   const handleSwitchProject = async (projectId) => {
-    if (projectId === currentProject?.id) {
+    // If clicking the same project but we're in "All Projects" mode,
+    // switch back to that project's scoped view
+    if (projectId === currentProject?.id && !viewAllProjects) {
       setIsOpen(false)
       return
     }
+    // switchProject in the store will reset viewAllProjects to false
     await switchProject(projectId)
     setIsOpen(false)
   }
@@ -438,57 +441,62 @@ export function ProjectSelector() {
                     </>
                   )}
                   
-                  {sortedProjects.map((project) => (
-                    <button
-                      key={project.id}
-                      className={`w-full px-3 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left ${
-                        project.id === currentProject?.id ? 'bg-muted' : ''
-                      } ${project.is_archived ? 'opacity-60' : ''}`}
-                      onClick={() => handleSwitchProject(project.id)}
-                    >
-                      {/* Project Color Dot */}
-                      <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: project.color || '#6366f1' }}
-                      />
-                      
-                      {/* Project Icon */}
-                      <span className="flex-shrink-0">
-                        {renderProjectIcon(project.icon, 'w-4 h-4')}
-                      </span>
-                      
-                      {/* Project Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm truncate">
-                            {project.name}
-                          </span>
-                          {project.is_default && (
-                            <Badge variant="secondary" className="text-[10px] px-1 py-0">
-                              Default
-                            </Badge>
-                          )}
-                          {project.is_archived && (
-                            <Archive className="w-3 h-3 text-muted-foreground" />
-                          )}
+                  {sortedProjects.map((project) => {
+                    // Only show as selected if this is the current project AND we're NOT in "All Projects" mode
+                    const isSelected = project.id === currentProject?.id && !viewAllProjects
+                    
+                    return (
+                      <button
+                        key={project.id}
+                        className={`w-full px-3 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left ${
+                          isSelected ? 'bg-muted' : ''
+                        } ${project.is_archived ? 'opacity-60' : ''}`}
+                        onClick={() => handleSwitchProject(project.id)}
+                      >
+                        {/* Project Color Dot */}
+                        <div 
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: project.color || '#6366f1' }}
+                        />
+                        
+                        {/* Project Icon */}
+                        <span className="flex-shrink-0">
+                          {renderProjectIcon(project.icon, 'w-4 h-4')}
+                        </span>
+                        
+                        {/* Project Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm truncate">
+                              {project.name}
+                            </span>
+                            {project.is_default && (
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                                Default
+                              </Badge>
+                            )}
+                            {project.is_archived && (
+                              <Archive className="w-3 h-3 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{project.item_count || 0} items</span>
+                            {project.region_count > 0 && (
+                              <>
+                                <span>•</span>
+                                <span>{project.region_count} regions</span>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{project.item_count || 0} items</span>
-                          {project.region_count > 0 && (
-                            <>
-                              <span>•</span>
-                              <span>{project.region_count} regions</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {/* Current Indicator */}
-                      {project.id === currentProject?.id && (
-                        <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      )}
-                    </button>
-                  ))}
+                        
+                        {/* Current Indicator - only show if selected AND not in "All Projects" mode */}
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>
