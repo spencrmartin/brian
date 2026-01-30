@@ -393,7 +393,7 @@ export function ProjectSelector() {
         </div>
       </div>
 
-      {/* Project Selector Dropdown Panel */}
+      {/* Project Selector Dropdown Panel - Positioned relative to button */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -402,7 +402,7 @@ export function ProjectSelector() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="fixed left-1/2 -translate-x-1/2 top-16 z-50 w-80 bg-card border rounded-lg shadow-xl overflow-hidden"
+            className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-80 bg-card border rounded-lg shadow-xl overflow-hidden"
           >
             {/* Header */}
             <div className="p-3 border-b bg-muted/50">
