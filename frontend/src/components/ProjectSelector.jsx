@@ -140,6 +140,7 @@ export function ProjectSelector() {
     fetchCurrentProject,
     switchProject,
     createProject,
+    updateProject,
     setViewAllProjects,
     viewAllProjects,
   } = useStore()
@@ -152,6 +153,14 @@ export function ProjectSelector() {
   const [newProjectDescription, setNewProjectDescription] = useState('')
   const [newProjectColor, setNewProjectColor] = useState('#6366f1')
   const [newProjectIcon, setNewProjectIcon] = useState('folder')
+  
+  // Edit project state
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingProject, setEditingProject] = useState(null)
+  const [editProjectName, setEditProjectName] = useState('')
+  const [editProjectDescription, setEditProjectDescription] = useState('')
+  const [editProjectColor, setEditProjectColor] = useState('#6366f1')
+  const [editProjectIcon, setEditProjectIcon] = useState('folder')
   
   const panelRef = useRef(null)
   const buttonRef = useRef(null)
@@ -327,6 +336,35 @@ export function ProjectSelector() {
   // Calculate total items across all projects
   const totalItems = projects.reduce((sum, p) => sum + (p.item_count || 0), 0)
 
+  // Open edit dialog for a project
+  const handleEditProject = (e, project) => {
+    e.stopPropagation() // Prevent switching to the project
+    setEditingProject(project)
+    setEditProjectName(project.name)
+    setEditProjectDescription(project.description || '')
+    setEditProjectColor(project.color || '#6366f1')
+    setEditProjectIcon(project.icon || 'folder')
+    setEditDialogOpen(true)
+    setIsOpen(false)
+  }
+
+  // Save edited project
+  const handleSaveProject = async () => {
+    if (!editingProject || !editProjectName.trim()) return
+    
+    await updateProject(editingProject.id, {
+      name: editProjectName.trim(),
+      description: editProjectDescription.trim(),
+      color: editProjectColor,
+      icon: editProjectIcon,
+    })
+    
+    setEditDialogOpen(false)
+    setEditingProject(null)
+    fetchProjects()
+    fetchCurrentProject()
+  }
+
   return (
     <>
       {/* Project Selector Pill - Centered at top */}
@@ -484,55 +522,69 @@ export function ProjectSelector() {
                     const isSelected = project.id === currentProject?.id && !viewAllProjects
                     
                     return (
-                      <button
+                      <div
                         key={project.id}
-                        className={`w-full px-3 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left ${
+                        className={`group/item w-full px-3 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors ${
                           isSelected ? 'bg-muted' : ''
                         } ${project.is_archived ? 'opacity-60' : ''}`}
-                        onClick={() => handleSwitchProject(project.id)}
                       >
-                        {/* Project Color Dot */}
-                        <div 
-                          className="w-3 h-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: project.color || '#6366f1' }}
-                        />
-                        
-                        {/* Project Icon */}
-                        <span className="flex-shrink-0">
-                          {renderProjectIcon(project.icon, 'w-4 h-4')}
-                        </span>
-                        
-                        {/* Project Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm truncate">
-                              {project.name}
-                            </span>
-                            {project.is_default && (
-                              <Badge variant="secondary" className="text-[10px] px-1 py-0">
-                                Default
-                              </Badge>
-                            )}
-                            {project.is_archived && (
-                              <Archive className="w-3 h-3 text-muted-foreground" />
-                            )}
+                        {/* Main clickable area */}
+                        <button
+                          className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                          onClick={() => handleSwitchProject(project.id)}
+                        >
+                          {/* Project Color Dot */}
+                          <div 
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: project.color || '#6366f1' }}
+                          />
+                          
+                          {/* Project Icon */}
+                          <span className="flex-shrink-0">
+                            {renderProjectIcon(project.icon, 'w-4 h-4')}
+                          </span>
+                          
+                          {/* Project Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate">
+                                {project.name}
+                              </span>
+                              {project.is_default && (
+                                <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                                  Default
+                                </Badge>
+                              )}
+                              {project.is_archived && (
+                                <Archive className="w-3 h-3 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{project.item_count || 0} items</span>
+                              {project.region_count > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span>{project.region_count} regions</span>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>{project.item_count || 0} items</span>
-                            {project.region_count > 0 && (
-                              <>
-                                <span>•</span>
-                                <span>{project.region_count} regions</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
+                        </button>
+                        
+                        {/* Edit button - shows on hover */}
+                        <button
+                          className="flex-shrink-0 p-1.5 rounded hover:bg-muted opacity-0 group-hover/item:opacity-100 transition-opacity"
+                          onClick={(e) => handleEditProject(e, project)}
+                          title="Edit project"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
                         
                         {/* Current Indicator - only show if selected AND not in "All Projects" mode */}
                         {isSelected && (
                           <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
                         )}
-                      </button>
+                      </div>
                     )
                   })}
                 </div>
@@ -668,6 +720,109 @@ export function ProjectSelector() {
                 <Plus className="w-4 h-4 mr-2" />
               )}
               Create Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-5 h-5" />
+              Edit Project
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Icon & Color Selection */}
+            <div className="flex items-center gap-4">
+              {/* Icon Preview */}
+              <div 
+                className="w-16 h-16 rounded-lg flex items-center justify-center border-2"
+                style={{ borderColor: editProjectColor, backgroundColor: `${editProjectColor}20` }}
+              >
+                {renderProjectIcon(editProjectIcon, 'w-8 h-8')}
+              </div>
+              
+              <div className="flex-1 space-y-2">
+                {/* Icon Options */}
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Icon</label>
+                  <div className="flex gap-1 flex-wrap max-h-24 overflow-y-auto">
+                    {iconOptions.map(({ name, Icon }) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className={`w-7 h-7 rounded flex items-center justify-center hover:bg-muted transition-colors ${
+                          editProjectIcon === name ? 'bg-muted ring-2 ring-primary' : ''
+                        }`}
+                        onClick={() => setEditProjectIcon(name)}
+                        title={name}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Color Options */}
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Color</label>
+                  <div className="flex gap-1 flex-wrap">
+                    {colorOptions.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${
+                          editProjectColor === color ? 'ring-2 ring-offset-2 ring-primary' : ''
+                        }`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => setEditProjectColor(color)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Name Input */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Project Name</label>
+              <Input
+                placeholder="My Knowledge Base"
+                value={editProjectName}
+                onChange={(e) => setEditProjectName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            
+            {/* Description Input */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Description (optional)</label>
+              <Input
+                placeholder="What is this project about?"
+                value={editProjectDescription}
+                onChange={(e) => setEditProjectDescription(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveProject}
+              disabled={!editProjectName.trim() || projectsLoading}
+            >
+              {projectsLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Check className="w-4 h-4 mr-2" />
+              )}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
