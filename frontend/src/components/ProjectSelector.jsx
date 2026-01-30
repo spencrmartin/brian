@@ -34,7 +34,35 @@ import {
   Star,
   Zap,
   Coffee,
-  Music
+  Music,
+  Layers,
+  Home,
+  Briefcase,
+  Calendar,
+  Camera,
+  Cloud,
+  Compass,
+  Crown,
+  Diamond,
+  Flame,
+  Gift,
+  Headphones,
+  Key,
+  Leaf,
+  Map,
+  Moon,
+  Package,
+  Pencil,
+  Phone,
+  Shield,
+  ShoppingCart,
+  Sun,
+  Truck,
+  Umbrella,
+  Users,
+  Wallet,
+  Watch,
+  Wifi
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -57,6 +85,34 @@ const ICON_MAP = {
   'zap': Zap,
   'coffee': Coffee,
   'music': Music,
+  'layers': Layers,
+  'home': Home,
+  'briefcase': Briefcase,
+  'calendar': Calendar,
+  'camera': Camera,
+  'cloud': Cloud,
+  'compass': Compass,
+  'crown': Crown,
+  'diamond': Diamond,
+  'flame': Flame,
+  'gift': Gift,
+  'headphones': Headphones,
+  'key': Key,
+  'leaf': Leaf,
+  'map': Map,
+  'moon': Moon,
+  'package': Package,
+  'pencil': Pencil,
+  'phone': Phone,
+  'shield': Shield,
+  'cart': ShoppingCart,
+  'sun': Sun,
+  'truck': Truck,
+  'umbrella': Umbrella,
+  'users': Users,
+  'wallet': Wallet,
+  'watch': Watch,
+  'wifi': Wifi,
 }
 
 // Get icon component from icon name
@@ -84,6 +140,8 @@ export function ProjectSelector() {
     fetchCurrentProject,
     switchProject,
     createProject,
+    setViewAllProjects,
+    viewAllProjects,
   } = useStore()
 
   const [isOpen, setIsOpen] = useState(false)
@@ -200,7 +258,7 @@ export function ProjectSelector() {
     '#6b7280', // Gray
   ]
 
-  // Lucide icon options for projects
+  // Lucide icon options for projects - expanded set
   const iconOptions = [
     { name: 'globe', Icon: Globe },
     { name: 'folder', Icon: Folder },
@@ -218,6 +276,29 @@ export function ProjectSelector() {
     { name: 'star', Icon: Star },
     { name: 'zap', Icon: Zap },
     { name: 'coffee', Icon: Coffee },
+    { name: 'music', Icon: Music },
+    { name: 'layers', Icon: Layers },
+    { name: 'home', Icon: Home },
+    { name: 'briefcase', Icon: Briefcase },
+    { name: 'calendar', Icon: Calendar },
+    { name: 'camera', Icon: Camera },
+    { name: 'cloud', Icon: Cloud },
+    { name: 'compass', Icon: Compass },
+    { name: 'crown', Icon: Crown },
+    { name: 'diamond', Icon: Diamond },
+    { name: 'flame', Icon: Flame },
+    { name: 'gift', Icon: Gift },
+    { name: 'headphones', Icon: Headphones },
+    { name: 'key', Icon: Key },
+    { name: 'leaf', Icon: Leaf },
+    { name: 'map', Icon: Map },
+    { name: 'moon', Icon: Moon },
+    { name: 'package', Icon: Package },
+    { name: 'pencil', Icon: Pencil },
+    { name: 'shield', Icon: Shield },
+    { name: 'sun', Icon: Sun },
+    { name: 'users', Icon: Users },
+    { name: 'wallet', Icon: Wallet },
   ]
 
   // Render project icon - handles both Lucide icons and legacy emojis
@@ -234,6 +315,15 @@ export function ProjectSelector() {
     return <span className="text-base">{iconName}</span>
   }
 
+  // Handle selecting "All Projects"
+  const handleSelectAll = () => {
+    setViewAllProjects?.(true)
+    setIsOpen(false)
+  }
+
+  // Calculate total items across all projects
+  const totalItems = projects.reduce((sum, p) => sum + (p.item_count || 0), 0)
+
   return (
     <>
       {/* Project Selector Button */}
@@ -247,13 +337,17 @@ export function ProjectSelector() {
           }`}
           onClick={() => setIsOpen(!isOpen)}
         >
-          {renderProjectIcon(currentProject?.icon, 'w-5 h-5')}
+          {viewAllProjects ? (
+            <Layers className="w-5 h-5" />
+          ) : (
+            renderProjectIcon(currentProject?.icon, 'w-5 h-5')
+          )}
         </Button>
         
         {/* Tooltip */}
         <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-light z-50">
           <div className="flex items-center gap-2">
-            <span>{currentProject?.name || 'Knowledge Bases'}</span>
+            <span>{viewAllProjects ? 'All Projects' : (currentProject?.name || 'Knowledge Bases')}</span>
             <kbd className="px-1.5 py-0.5 text-xs bg-white/20 rounded">⌘P</kbd>
           </div>
         </div>
@@ -303,6 +397,47 @@ export function ProjectSelector() {
                 </div>
               ) : (
                 <div className="py-1">
+                  {/* All Projects Option */}
+                  {projects.length > 1 && !searchQuery && (
+                    <>
+                      <button
+                        className={`w-full px-3 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left ${
+                          viewAllProjects ? 'bg-indigo-500/10' : ''
+                        }`}
+                        onClick={handleSelectAll}
+                      >
+                        {/* Gradient Dot */}
+                        <div className="w-3 h-3 rounded-full flex-shrink-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
+                        
+                        {/* Layers Icon */}
+                        <span className="flex-shrink-0">
+                          <Layers className="w-4 h-4" />
+                        </span>
+                        
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">All Projects</span>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400">
+                              Universe
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{projects.length} projects</span>
+                            <span>•</span>
+                            <span>{totalItems} total items</span>
+                          </div>
+                        </div>
+                        
+                        {/* Current Indicator */}
+                        {viewAllProjects && (
+                          <Check className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                        )}
+                      </button>
+                      <div className="mx-3 my-1 border-t border-border/50" />
+                    </>
+                  )}
+                  
                   {sortedProjects.map((project) => (
                     <button
                       key={project.id}
