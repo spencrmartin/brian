@@ -226,10 +226,21 @@ function updateRegionHulls(regionsLayer, regions, nodePositions, hoveredRegionId
  * Similar to updateRegionHulls but for project-level groupings
  */
 function updateProjectHulls(projectsLayer, projects, nodePositions, zoomScale, hoveredProjectId) {
-  if (!projectsLayer || !projects || projects.length === 0) return
+  if (!projectsLayer || !projects || projects.length === 0) {
+    console.log('[ProjectHulls] Early return:', { hasLayer: !!projectsLayer, projectCount: projects?.length || 0 })
+    return
+  }
   
-  // Only show project hulls when zoomed out enough
-  const projectHullOpacity = zoomScale < 0.4 ? Math.min(1, (0.4 - zoomScale) * 5) : 0
+  // Show project hulls at all zoom levels in universe mode (opacity based on zoom)
+  // More visible when zoomed out, but always somewhat visible
+  const projectHullOpacity = zoomScale < 0.6 ? Math.min(1, (0.6 - zoomScale) * 3 + 0.2) : 0.2
+  
+  console.log('[ProjectHulls] Updating:', { 
+    projectCount: projects.length, 
+    nodeCount: nodePositions.size, 
+    zoomScale, 
+    opacity: projectHullOpacity 
+  })
   
   // Bind data to project groups
   const projectGroups = projectsLayer.selectAll('.project-group')
@@ -709,14 +720,25 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
   }, [selectedNode])
 
   useEffect(() => {
-    if (!items || items.length === 0 || !svgRef.current || loading) return
+    // In universe mode, use allItems; otherwise use items prop
+    const displayItems = universeMode && allItems.length > 0 ? allItems : items
+    
+    if (!displayItems || displayItems.length === 0 || !svgRef.current || loading) return
     if (connections.length === 0) return
+
+    console.log('[SimilarityGraph] Rendering:', { 
+      universeMode, 
+      displayItemsCount: displayItems.length, 
+      itemsCount: items?.length,
+      allItemsCount: allItems.length,
+      projectsCount: projects?.length
+    })
 
     // Clear previous content
     d3.select(svgRef.current).selectAll('*').remove()
 
     // Create nodes from items
-    const nodes = items.map(item => ({
+    const nodes = displayItems.map(item => ({
       id: item.id,
       title: item.title,
       type: item.item_type,
@@ -1055,7 +1077,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     return () => {
       simulation.stop()
     }
-  }, [items, connections, width, height, loading, isDarkMode, regions, universeMode, projectCentroids, projects, hoveredProject])
+  }, [items, allItems, connections, width, height, loading, isDarkMode, regions, universeMode, projectCentroids, projects, hoveredProject])
   
   // Separate effect for region hover updates (doesn't restart simulation)
   useEffect(() => {
