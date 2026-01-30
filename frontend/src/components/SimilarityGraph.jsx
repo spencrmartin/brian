@@ -325,13 +325,14 @@ function updateProjectHulls(projectsLayer, projects, nodePositions, zoomScale, h
     const cx = points.reduce((sum, p) => sum + p.x, 0) / points.length
     const cy = points.reduce((sum, p) => sum + p.y, 0) / points.length
     
-    // Update hull path
+    // Update hull path with prominent outline
     group.select('.project-hull')
       .attr('d', hullPath(expandedHull))
       .attr('fill', project.color || '#6366f1')
       .attr('stroke', project.color || '#6366f1')
-      .attr('fill-opacity', isHovered ? 0.15 : 0.08)
-      .attr('stroke-opacity', (isHovered ? 1 : 0.5) * projectHullOpacity)
+      .attr('fill-opacity', (isHovered ? 0.15 : 0.08) * projectHullOpacity)
+      .attr('stroke-opacity', isHovered ? 1 : 0.7)
+      .attr('stroke-width', isHovered ? 4 : 3)
       .attr('opacity', projectHullOpacity)
     
     // Update label - show project name when zoomed out
