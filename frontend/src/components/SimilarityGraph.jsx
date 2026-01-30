@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+// TODO: Add Slider component for zoom control in Phase 6d
+// import { Slider } from '@/components/ui/slider'
 import {
   Dialog,
   DialogContent,
@@ -12,10 +14,13 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Loader2, Tag, Info, Link as LinkIcon, FileText, Code2, FileCode, Map as MapIcon, Eye, EyeOff, Pencil, Trash2, Plus, Check, Settings2, Brain, Sparkles } from 'lucide-react'
+import { Loader2, Tag, Info, Link as LinkIcon, FileText, Code2, FileCode, Map as MapIcon, Eye, EyeOff, Pencil, Trash2, Plus, Check, Settings2, Brain, Sparkles, Home, Layers, ZoomIn, ZoomOut } from 'lucide-react'
 import { useStore } from '@/store/useStore'
 import { RegionEditDialog } from './RegionEditDialog'
 import { ProjectPill } from './ProjectPill'
+
+// Distance multiplier for spreading projects apart
+const PROJECT_SPREAD = 2000
 
 // Predefined color palette for regions
 const REGION_COLORS = [
@@ -217,9 +222,144 @@ function updateRegionHulls(regionsLayer, regions, nodePositions, hoveredRegionId
 }
 
 /**
+ * Update project hulls on the SVG layer
+ * Similar to updateRegionHulls but for project-level groupings
+ */
+function updateProjectHulls(projectsLayer, projects, nodePositions, zoomScale, hoveredProjectId) {
+  if (!projectsLayer || !projects || projects.length === 0) {
+    console.log('[ProjectHulls] Early return:', { hasLayer: !!projectsLayer, projectCount: projects?.length || 0 })
+    return
+  }
+  
+  // Show project hulls at all zoom levels in universe mode (opacity based on zoom)
+  // More visible when zoomed out, but always somewhat visible
+  const projectHullOpacity = zoomScale < 0.6 ? Math.min(1, (0.6 - zoomScale) * 3 + 0.2) : 0.2
+  
+  console.log('[ProjectHulls] Updating:', { 
+    projectCount: projects.length, 
+    nodeCount: nodePositions.size, 
+    zoomScale, 
+    opacity: projectHullOpacity 
+  })
+  
+  // Bind data to project groups
+  const projectGroups = projectsLayer.selectAll('.project-group')
+    .data(projects, d => d.id)
+  
+  // Remove old projects
+  projectGroups.exit().remove()
+  
+  // Add new project groups
+  const enterGroups = projectGroups.enter()
+    .append('g')
+    .attr('class', 'project-group')
+  
+  // Add path for hull shape
+  enterGroups.append('path')
+    .attr('class', 'project-hull')
+    .attr('fill-opacity', 0.08)
+    .attr('stroke-width', 3)
+    .attr('stroke-dasharray', '12,6')
+  
+  // Add label at centroid
+  enterGroups.append('text')
+    .attr('class', 'project-label')
+    .attr('text-anchor', 'middle')
+    .attr('font-size', 24)
+    .attr('font-weight', 600)
+    .attr('fill-opacity', 0.9)
+    .attr('pointer-events', 'none')
+  
+  // Add item count badge
+  enterGroups.append('text')
+    .attr('class', 'project-count')
+    .attr('text-anchor', 'middle')
+    .attr('font-size', 14)
+    .attr('font-weight', 400)
+    .attr('fill-opacity', 0.6)
+    .attr('pointer-events', 'none')
+  
+  // Merge enter and update selections
+  const allGroups = enterGroups.merge(projectGroups)
+  
+  // Update each project
+  allGroups.each(function(project) {
+    const group = d3.select(this)
+    const isHovered = project.id === hoveredProjectId
+    
+    // Get positions of items in this project
+    const points = (project.itemIds || [])
+      .map(id => nodePositions.get(id))
+      .filter(p => p && p.x !== undefined && p.y !== undefined)
+    
+    if (points.length < 2) {
+      group.select('.project-hull').attr('d', '').attr('opacity', 0)
+      group.select('.project-label').attr('opacity', 0)
+      group.select('.project-count').attr('opacity', 0)
+      return
+    }
+    
+    // Compute convex hull with larger padding for projects
+    let hull, expandedHull
+    if (points.length === 2) {
+      const [p1, p2] = points
+      const dx = p2.x - p1.x
+      const dy = p2.y - p1.y
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1
+      const perpX = -dy / dist * 80
+      const perpY = dx / dist * 80
+      
+      hull = [
+        { x: p1.x + perpX, y: p1.y + perpY },
+        { x: p2.x + perpX, y: p2.y + perpY },
+        { x: p2.x - perpX, y: p2.y - perpY },
+        { x: p1.x - perpX, y: p1.y - perpY }
+      ]
+      expandedHull = hull
+    } else {
+      hull = computeConvexHull([...points])
+      expandedHull = expandHull(hull, 80) // Larger padding for projects
+    }
+    
+    // Calculate centroid for label
+    const cx = points.reduce((sum, p) => sum + p.x, 0) / points.length
+    const cy = points.reduce((sum, p) => sum + p.y, 0) / points.length
+    
+    // Update hull path with prominent outline
+    group.select('.project-hull')
+      .attr('d', hullPath(expandedHull))
+      .attr('fill', project.color || '#6366f1')
+      .attr('stroke', project.color || '#6366f1')
+      .attr('fill-opacity', (isHovered ? 0.15 : 0.08) * projectHullOpacity)
+      .attr('stroke-opacity', isHovered ? 1 : 0.7)
+      .attr('stroke-width', isHovered ? 4 : 3)
+      .attr('opacity', projectHullOpacity)
+    
+    // Update label - show project name when zoomed out
+    group.select('.project-label')
+      .attr('x', cx)
+      .attr('y', cy - 15)
+      .attr('fill', project.color || '#6366f1')
+      .attr('opacity', projectHullOpacity * (isHovered ? 1 : 0.8))
+      .text(project.name)
+    
+    // Update item count
+    group.select('.project-count')
+      .attr('x', cx)
+      .attr('y', cy + 15)
+      .attr('fill', project.color || '#6366f1')
+      .attr('opacity', projectHullOpacity * 0.6)
+      .text(`${points.length} items`)
+  })
+}
+
+/**
  * SimilarityGraph - Force-directed graph showing content similarity connections
  * Uses D3.js force simulation to visualize relationships between knowledge items
  * Supports theme-based highlighting via hover and knowledge regions
+ * 
+ * HIERARCHICAL ZOOM: Shows all projects in a "knowledge universe" where
+ * zooming out reveals project clusters as galaxies
  */
 export function SimilarityGraph({ items, width = 1200, height = 800 }) {
   const svgRef = useRef(null)
@@ -228,10 +368,20 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
   const [selectedNode, setSelectedNode] = useState(null)
   const [hoveredTheme, setHoveredTheme] = useState(null)
   const [hoveredRegion, setHoveredRegion] = useState(null)
+  const [hoveredProject, setHoveredProject] = useState(null)
   const [showThemeLegend, setShowThemeLegend] = useState(false)
   const [showInfoLegend, setShowInfoLegend] = useState(false)
   const [showRegionsPanel, setShowRegionsPanel] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  
+  // Hierarchical zoom state
+  const [zoomScale, setZoomScale] = useState(1)
+  const [allProjects, setAllProjects] = useState([])
+  const [allItems, setAllItems] = useState([])
+  const [allRegions, setAllRegions] = useState([])
+  const zoomRef = useRef(null)
+  const svgSelectionRef = useRef(null)
+  const projectElementsRef = useRef(null)
   
   // Region and project state from store
   const { 
@@ -242,8 +392,23 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     toggleRegionVisibility,
     deleteRegion,
     regionsLoading,
-    currentProject
+    currentProject,
+    projects,
+    viewAllProjects,
+    setViewAllProjects,
+    items: storeItems,
+    fetchItems
   } = useStore()
+  
+  // Universe mode is synced with viewAllProjects from store
+  // This ensures ProjectSelector "All Projects" and graph Universe Mode are in sync
+  const universeMode = viewAllProjects
+  const setUniverseMode = (value) => setViewAllProjects(value)
+  
+  // Use store items (project-filtered) when not in universe mode
+  // The items prop from App.jsx is NOT filtered by project, so we ignore it
+  // and use the store's items which respect the currentProject filter
+  const projectFilteredItems = storeItems
   
   // Create Region dialog state
   const [showCreateRegionDialog, setShowCreateRegionDialog] = useState(false)
@@ -264,6 +429,10 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
   const nodePositionsRef = useRef(new Map())
   const regionElementsRef = useRef(null)
   const hoveredRegionRef = useRef(null)
+  
+  // Refs for semantic zoom element updates
+  const labelElementsRef = useRef(null)
+  const linkLabelElementsRef = useRef(null)
 
   // Detect dark mode
   useEffect(() => {
@@ -360,19 +529,34 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
       .attr('stroke', '#999')
   }
 
-  // Fetch similarity connections from API (scoped to current project)
+  // Fetch similarity connections from API
+  // In universe mode: fetch ALL connections across all projects
+  // In normal mode: scope to current project
   useEffect(() => {
     const fetchConnections = async () => {
       try {
         setLoading(true)
-        // Build URL with project_id filter if a project is selected
+        
+        // Build URL - no project filter in universe mode to get cross-project connections
         let url = 'http://localhost:8080/api/v1/similarity/connections?threshold=0.15&max_per_item=5'
-        if (currentProject?.id) {
+        if (!universeMode && currentProject?.id) {
           url += `&project_id=${currentProject.id}`
         }
+        
         const response = await fetch(url)
         const data = await response.json()
         setConnections(data)
+        
+        // In universe mode, also fetch all items across all projects
+        if (universeMode) {
+          try {
+            const itemsResponse = await fetch('http://localhost:8080/api/v1/knowledge')
+            const allItemsData = await itemsResponse.json()
+            setAllItems(allItemsData)
+          } catch (err) {
+            console.error('Failed to fetch all items:', err)
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch similarity connections:', error)
         setConnections([])
@@ -384,7 +568,29 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     if (items && items.length > 0) {
       fetchConnections()
     }
-  }, [items, currentProject?.id])
+  }, [items, currentProject?.id, universeMode])
+  
+  // Compute project centroids for clustering forces
+  const projectCentroids = useMemo(() => {
+    if (!universeMode || !projects || projects.length === 0) return new Map()
+    
+    const centroids = new Map()
+    const numProjects = projects.length
+    const angleStep = (2 * Math.PI) / numProjects
+    
+    // Arrange projects in a circle around the center
+    projects.forEach((project, index) => {
+      const angle = index * angleStep - Math.PI / 2 // Start from top
+      centroids.set(project.id, {
+        x: width / 2 + Math.cos(angle) * PROJECT_SPREAD,
+        y: height / 2 + Math.sin(angle) * PROJECT_SPREAD,
+        color: project.color || '#6366f1',
+        name: project.name
+      })
+    })
+    
+    return centroids
+  }, [universeMode, projects, width, height])
 
   // Fetch regions when component mounts
   useEffect(() => {
@@ -527,15 +733,35 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     }
   }, [selectedNode])
 
+  // Fetch store items when component mounts or project changes
   useEffect(() => {
-    if (!items || items.length === 0 || !svgRef.current || loading) return
+    if (!universeMode) {
+      fetchItems()
+    }
+  }, [universeMode, currentProject?.id, fetchItems])
+
+  useEffect(() => {
+    // In universe mode, use allItems (all projects)
+    // Otherwise use projectFilteredItems from store (filtered by current project)
+    const displayItems = universeMode && allItems.length > 0 ? allItems : projectFilteredItems
+    
+    if (!displayItems || displayItems.length === 0 || !svgRef.current || loading) return
     if (connections.length === 0) return
+
+    console.log('[SimilarityGraph] Rendering:', { 
+      universeMode, 
+      displayItemsCount: displayItems.length, 
+      projectFilteredCount: projectFilteredItems?.length,
+      allItemsCount: allItems.length,
+      projectsCount: projects?.length,
+      currentProjectId: currentProject?.id
+    })
 
     // Clear previous content
     d3.select(svgRef.current).selectAll('*').remove()
 
     // Create nodes from items
-    const nodes = items.map(item => ({
+    const nodes = displayItems.map(item => ({
       id: item.id,
       title: item.title,
       type: item.item_type,
@@ -572,7 +798,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     const g = svg.append('g')
     
     const zoom = d3.zoom()
-      .scaleExtent([0.1, 4])
+      .scaleExtent([0.05, 4]) // Extended range for universe view (0.05 = very zoomed out)
       .on('zoom', (event) => {
         g.attr('transform', event.transform)
       })
@@ -586,8 +812,24 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
         .distance(d => 150 / (d.similarity + 0.1)) // Closer for higher similarity
       )
       .force('charge', d3.forceManyBody().strength(-300))
-      .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide().radius(30))
+    
+    // In universe mode, add project clustering forces instead of center force
+    if (universeMode && projectCentroids.size > 0) {
+      // Pull nodes toward their project's centroid
+      simulation
+        .force('projectX', d3.forceX(d => {
+          const centroid = projectCentroids.get(d.project_id)
+          return centroid ? centroid.x : width / 2
+        }).strength(0.3))
+        .force('projectY', d3.forceY(d => {
+          const centroid = projectCentroids.get(d.project_id)
+          return centroid ? centroid.y : height / 2
+        }).strength(0.3))
+    } else {
+      // Normal mode: center force
+      simulation.force('center', d3.forceCenter(width / 2, height / 2))
+    }
 
     // Add links
     const link = g.append('g')
@@ -616,6 +858,9 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
       .attr('fill', mutedTextColor)
       .attr('text-anchor', 'middle')
       .text(d => `${(d.similarity * 100).toFixed(0)}%`)
+    
+    // Store link label reference for semantic zoom
+    linkLabelElementsRef.current = linkLabel
 
     // Add nodes
     const node = g.append('g')
@@ -645,6 +890,9 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
       .attr('dy', 4)
       .text(d => d.title.length > 30 ? d.title.substring(0, 30) + '...' : d.title)
       .style('pointer-events', 'none')
+    
+    // Store label reference for semantic zoom
+    labelElementsRef.current = label
 
     // Add hover effects for nodes
     node
@@ -694,6 +942,95 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     
     // Store reference for region updates
     regionElementsRef.current = regionsLayer
+    
+    // Create projects layer (behind regions layer) - only in universe mode
+    let projectsLayer = null
+    if (universeMode) {
+      projectsLayer = g.insert('g', ':first-child')
+        .attr('class', 'projects-layer')
+      projectElementsRef.current = projectsLayer
+    }
+    
+    // Track current zoom scale for semantic zoom
+    let currentZoomScale = 1
+    
+    /**
+     * Handle semantic zoom - adjust visual elements based on zoom level
+     * This creates a smooth transition between detail levels:
+     * - Zoomed in (scale > 1): Full detail, all labels visible
+     * - Medium (0.5 - 1): Labels start fading
+     * - Zoomed out (0.3 - 0.5): Labels hidden, nodes shrink
+     * - Far out (< 0.3): Only project hulls visible, nodes are dots
+     */
+    function handleSemanticZoom(scale) {
+      // Calculate opacity values based on zoom scale with smooth transitions
+      // Item labels: fade out between 0.5 and 0.3
+      const labelOpacity = scale > 0.5 ? 1 : scale < 0.3 ? 0 : (scale - 0.3) / 0.2
+      
+      // Link labels: fade out between 0.6 and 0.4
+      const linkLabelOpacity = scale > 0.6 ? 1 : scale < 0.4 ? 0 : (scale - 0.4) / 0.2
+      
+      // Node size: shrink when zoomed out (scale < 0.5)
+      // At scale 1.0: radius 8, at scale 0.2: radius 4
+      const nodeRadius = scale > 0.5 ? 8 : Math.max(3, 8 * (scale / 0.5))
+      
+      // Apply to item labels with smooth transition
+      if (label) {
+        label
+          .transition()
+          .duration(150)
+          .attr('opacity', labelOpacity)
+          .attr('font-size', scale > 0.5 ? 11 : Math.max(8, 11 * (scale / 0.5)))
+      }
+      
+      // Apply to link labels
+      if (linkLabel) {
+        linkLabel
+          .transition()
+          .duration(150)
+          .attr('opacity', linkLabelOpacity)
+      }
+      
+      // Apply to nodes (shrink when zoomed out)
+      if (node) {
+        node
+          .transition()
+          .duration(150)
+          .attr('r', nodeRadius)
+      }
+      
+      // Adjust link opacity when very zoomed out
+      const linkOpacity = scale > 0.3 ? 1 : Math.max(0.3, scale / 0.3)
+      if (link) {
+        link
+          .transition()
+          .duration(150)
+          .attr('stroke-opacity', d => (0.3 + d.similarity * 0.5) * linkOpacity)
+      }
+    }
+    
+    // Update zoom behavior to track scale
+    zoom.on('zoom', (event) => {
+      g.attr('transform', event.transform)
+      currentZoomScale = event.transform.k
+      setZoomScale(currentZoomScale)
+      
+      // Apply semantic zoom effects
+      handleSemanticZoom(currentZoomScale)
+      
+      // Update project hulls with new zoom scale (in universe mode)
+      if (universeMode && projectsLayer && nodePositionsRef.current.size > 0) {
+        // Build projects data with item IDs for hull calculation
+        const projectsWithItems = projects.map(p => ({
+          ...p,
+          itemIds: nodes.filter(n => n.project_id === p.id).map(n => n.id)
+        }))
+        updateProjectHulls(projectsLayer, projectsWithItems, nodePositionsRef.current, currentZoomScale, hoveredProject)
+      }
+    })
+    
+    // Re-apply zoom behavior with updated handler
+    svg.call(zoom)
 
     // Update positions on each tick
     simulation.on('tick', () => {
@@ -722,6 +1059,16 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
       
       // Update region hulls (use ref for hovered state to avoid re-renders)
       updateRegionHulls(regionsLayer, regions, nodePositionsRef.current, hoveredRegionRef.current)
+      
+      // Update project hulls in universe mode
+      if (universeMode && projectsLayer) {
+        // Build projects data with item IDs for hull calculation
+        const projectsWithItems = projects.map(p => ({
+          ...p,
+          itemIds: nodes.filter(n => n.project_id === p.id).map(n => n.id)
+        }))
+        updateProjectHulls(projectsLayer, projectsWithItems, nodePositionsRef.current, currentZoomScale, hoveredProject)
+      }
     })
 
     // Drag behavior
@@ -753,7 +1100,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     return () => {
       simulation.stop()
     }
-  }, [items, connections, width, height, loading, isDarkMode, regions])
+  }, [items, allItems, connections, width, height, loading, isDarkMode, regions, universeMode, projectCentroids, projects, hoveredProject])
   
   // Separate effect for region hover updates (doesn't restart simulation)
   useEffect(() => {
@@ -1230,6 +1577,20 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
         </DialogContent>
       </Dialog>
       
+      {/* Zoom Level Indicator - Centered at bottom */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 bg-card/90 backdrop-blur-md px-3 py-2 rounded-lg shadow-lg border border-border">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <ZoomIn className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium tabular-nums">{(zoomScale * 100).toFixed(0)}%</span>
+          </div>
+          <div className="h-4 w-px bg-border" />
+          <span className="text-xs text-muted-foreground">
+            {zoomScale > 0.5 ? 'Items' : zoomScale > 0.3 ? 'Regions' : 'Projects'}
+          </span>
+        </div>
+      </div>
+
       {/* Info/Legend Button - Circular like nav items */}
       <div className="absolute bottom-6 right-6 z-40">
         <div className="group relative">

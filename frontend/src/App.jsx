@@ -166,6 +166,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Top Center - Project Selector Pill */}
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50">
+        <ProjectSelector />
+      </div>
+
       {/* Top Left Navigation - Icon Buttons */}
       <div className="fixed top-6 left-6 z-50 flex flex-col gap-2">
         {/* Brain Logo Button */}
@@ -177,9 +182,6 @@ function App() {
             <BrainLogo className="w-6 h-6 text-white" />
           </Button>
         </div>
-
-        {/* Project Selector Button */}
-        <ProjectSelector />
 
         {/* Feed Button */}
         <div className="group relative">
@@ -256,7 +258,7 @@ function App() {
 
       {/* Filter Pills Bar - Only show when feed is selected and a filter is active */}
       {selectedView === 'feed' && filterType !== null && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-40">
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-40">
           <div className="rounded-full p-1 flex gap-1 shadow-lg bg-accent-color">
             {filterButtons.map((filter) => (
               <button

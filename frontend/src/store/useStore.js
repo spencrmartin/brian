@@ -34,6 +34,7 @@ export const useStore = create((set, get) => ({
   projects: [],
   currentProject: null,
   projectsLoading: false,
+  viewAllProjects: true,  // Default to showing all projects (Universe Mode)
   
   // UI state
   currentView: 'feed',
@@ -57,16 +58,26 @@ export const useStore = create((set, get) => ({
     editingItemId: null,
   }),
   
+  // Set view all projects mode
+  setViewAllProjects: (value) => {
+    set({ viewAllProjects: value })
+    // Refresh data when toggling
+    get().fetchItems()
+    get().fetchRegions()
+  },
+  
   // Fetch items
   fetchItems: async () => {
     set({ loading: true, error: null })
     try {
       const currentProject = get().currentProject
+      const viewAllProjects = get().viewAllProjects
       const filters = { ...get().filters }
-      // Add project_id filter if we have a current project
-      if (currentProject?.id) {
+      // Add project_id filter if we have a current project AND not viewing all
+      if (currentProject?.id && !viewAllProjects) {
         filters.project_id = currentProject.id
       }
+      // If viewAllProjects is true, don't add project_id filter (fetch all)
       const items = await api.getItems(filters)
       set({ items, loading: false })
     } catch (error) {
@@ -184,11 +195,13 @@ export const useStore = create((set, get) => ({
     set({ regionsLoading: true })
     try {
       const currentProject = get().currentProject
+      const viewAllProjects = get().viewAllProjects
       const regionFilters = { ...filters }
-      // Add project_id filter if we have a current project
-      if (currentProject?.id) {
+      // Add project_id filter if we have a current project AND not viewing all
+      if (currentProject?.id && !viewAllProjects) {
         regionFilters.project_id = currentProject.id
       }
+      // If viewAllProjects is true, don't add project_id filter (fetch all)
       const regions = await api.getRegions(regionFilters)
       set({ regions, regionsLoading: false })
     } catch (error) {
@@ -345,7 +358,7 @@ export const useStore = create((set, get) => ({
 
   // Switch to a different project
   switchProject: async (projectId) => {
-    set({ projectsLoading: true })
+    set({ projectsLoading: true, viewAllProjects: false })  // Reset viewAllProjects when switching
     try {
       await api.setDefaultProject(projectId)
       await api.updateProjectAccess(projectId)

@@ -34,7 +34,35 @@ import {
   Star,
   Zap,
   Coffee,
-  Music
+  Music,
+  Layers,
+  Home,
+  Briefcase,
+  Calendar,
+  Camera,
+  Cloud,
+  Compass,
+  Crown,
+  Diamond,
+  Flame,
+  Gift,
+  Headphones,
+  Key,
+  Leaf,
+  Map,
+  Moon,
+  Package,
+  Pencil,
+  Phone,
+  Shield,
+  ShoppingCart,
+  Sun,
+  Truck,
+  Umbrella,
+  Users,
+  Wallet,
+  Watch,
+  Wifi
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -57,6 +85,34 @@ const ICON_MAP = {
   'zap': Zap,
   'coffee': Coffee,
   'music': Music,
+  'layers': Layers,
+  'home': Home,
+  'briefcase': Briefcase,
+  'calendar': Calendar,
+  'camera': Camera,
+  'cloud': Cloud,
+  'compass': Compass,
+  'crown': Crown,
+  'diamond': Diamond,
+  'flame': Flame,
+  'gift': Gift,
+  'headphones': Headphones,
+  'key': Key,
+  'leaf': Leaf,
+  'map': Map,
+  'moon': Moon,
+  'package': Package,
+  'pencil': Pencil,
+  'phone': Phone,
+  'shield': Shield,
+  'cart': ShoppingCart,
+  'sun': Sun,
+  'truck': Truck,
+  'umbrella': Umbrella,
+  'users': Users,
+  'wallet': Wallet,
+  'watch': Watch,
+  'wifi': Wifi,
 }
 
 // Get icon component from icon name
@@ -84,6 +140,9 @@ export function ProjectSelector() {
     fetchCurrentProject,
     switchProject,
     createProject,
+    updateProject,
+    setViewAllProjects,
+    viewAllProjects,
   } = useStore()
 
   const [isOpen, setIsOpen] = useState(false)
@@ -94,6 +153,14 @@ export function ProjectSelector() {
   const [newProjectDescription, setNewProjectDescription] = useState('')
   const [newProjectColor, setNewProjectColor] = useState('#6366f1')
   const [newProjectIcon, setNewProjectIcon] = useState('folder')
+  
+  // Edit project state
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editingProject, setEditingProject] = useState(null)
+  const [editProjectName, setEditProjectName] = useState('')
+  const [editProjectDescription, setEditProjectDescription] = useState('')
+  const [editProjectColor, setEditProjectColor] = useState('#6366f1')
+  const [editProjectIcon, setEditProjectIcon] = useState('folder')
   
   const panelRef = useRef(null)
   const buttonRef = useRef(null)
@@ -158,10 +225,13 @@ export function ProjectSelector() {
   })
 
   const handleSwitchProject = async (projectId) => {
-    if (projectId === currentProject?.id) {
+    // If clicking the same project but we're in "All Projects" mode,
+    // switch back to that project's scoped view
+    if (projectId === currentProject?.id && !viewAllProjects) {
       setIsOpen(false)
       return
     }
+    // switchProject in the store will reset viewAllProjects to false
     await switchProject(projectId)
     setIsOpen(false)
   }
@@ -200,7 +270,7 @@ export function ProjectSelector() {
     '#6b7280', // Gray
   ]
 
-  // Lucide icon options for projects
+  // Lucide icon options for projects - expanded set
   const iconOptions = [
     { name: 'globe', Icon: Globe },
     { name: 'folder', Icon: Folder },
@@ -218,6 +288,29 @@ export function ProjectSelector() {
     { name: 'star', Icon: Star },
     { name: 'zap', Icon: Zap },
     { name: 'coffee', Icon: Coffee },
+    { name: 'music', Icon: Music },
+    { name: 'layers', Icon: Layers },
+    { name: 'home', Icon: Home },
+    { name: 'briefcase', Icon: Briefcase },
+    { name: 'calendar', Icon: Calendar },
+    { name: 'camera', Icon: Camera },
+    { name: 'cloud', Icon: Cloud },
+    { name: 'compass', Icon: Compass },
+    { name: 'crown', Icon: Crown },
+    { name: 'diamond', Icon: Diamond },
+    { name: 'flame', Icon: Flame },
+    { name: 'gift', Icon: Gift },
+    { name: 'headphones', Icon: Headphones },
+    { name: 'key', Icon: Key },
+    { name: 'leaf', Icon: Leaf },
+    { name: 'map', Icon: Map },
+    { name: 'moon', Icon: Moon },
+    { name: 'package', Icon: Package },
+    { name: 'pencil', Icon: Pencil },
+    { name: 'shield', Icon: Shield },
+    { name: 'sun', Icon: Sun },
+    { name: 'users', Icon: Users },
+    { name: 'wallet', Icon: Wallet },
   ]
 
   // Render project icon - handles both Lucide icons and legacy emojis
@@ -234,42 +327,122 @@ export function ProjectSelector() {
     return <span className="text-base">{iconName}</span>
   }
 
+  // Handle selecting "All Projects"
+  const handleSelectAll = () => {
+    setViewAllProjects?.(true)
+    setIsOpen(false)
+  }
+
+  // Calculate total items across all projects
+  const totalItems = projects.reduce((sum, p) => sum + (p.item_count || 0), 0)
+
+  // Open edit dialog for a project
+  const handleEditProject = (e, project) => {
+    e.stopPropagation() // Prevent switching to the project
+    setEditingProject(project)
+    setEditProjectName(project.name)
+    setEditProjectDescription(project.description || '')
+    setEditProjectColor(project.color || '#6366f1')
+    setEditProjectIcon(project.icon || 'folder')
+    setEditDialogOpen(true)
+    setIsOpen(false)
+  }
+
+  // Save edited project
+  const handleSaveProject = async () => {
+    if (!editingProject || !editProjectName.trim()) return
+    
+    await updateProject(editingProject.id, {
+      name: editProjectName.trim(),
+      description: editProjectDescription.trim(),
+      color: editProjectColor,
+      icon: editProjectIcon,
+    })
+    
+    setEditDialogOpen(false)
+    setEditingProject(null)
+    fetchProjects()
+    fetchCurrentProject()
+  }
+
   return (
     <>
-      {/* Project Selector Button */}
+      {/* Project Selector Pill - Centered at top */}
       <div className="group relative" ref={buttonRef}>
-        <Button 
-          size="icon"
-          className={`h-12 w-12 rounded-full shadow-lg transition-colors border-2 border-accent-color ${
-            isOpen 
-              ? 'bg-black hover:bg-gray-800 text-white' 
-              : 'bg-card hover:bg-muted text-foreground'
-          }`}
+        <button
           onClick={() => setIsOpen(!isOpen)}
+          className={`
+            flex items-center gap-3 px-5 py-2.5 rounded-full shadow-lg transition-all duration-200
+            backdrop-blur-md border
+            ${isOpen 
+              ? 'bg-black/90 text-white border-white/20' 
+              : viewAllProjects
+                ? 'bg-indigo-600/90 text-white border-indigo-400/30 hover:bg-indigo-700/90'
+                : 'bg-card/90 text-foreground border-border hover:bg-muted/90'
+            }
+          `}
+          style={!viewAllProjects && currentProject?.color ? {
+            borderColor: `${currentProject.color}40`,
+          } : {}}
         >
-          {renderProjectIcon(currentProject?.icon, 'w-5 h-5')}
-        </Button>
+          {/* Project Color Dot / Gradient for All */}
+          {viewAllProjects ? (
+            <div className="w-3 h-3 rounded-full bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400" />
+          ) : (
+            <div 
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: currentProject?.color || '#6366f1' }}
+            />
+          )}
+          
+          {/* Icon */}
+          {viewAllProjects ? (
+            <Layers className="w-4 h-4" />
+          ) : (
+            renderProjectIcon(currentProject?.icon, 'w-4 h-4')
+          )}
+          
+          {/* Project Name */}
+          <span className="font-medium text-sm">
+            {viewAllProjects ? 'All Projects' : (currentProject?.name || 'Select Project')}
+          </span>
+          
+          {/* Stats Badge */}
+          <span className={`text-xs px-2 py-0.5 rounded-full ${
+            viewAllProjects 
+              ? 'bg-white/20 text-indigo-100' 
+              : 'bg-muted text-muted-foreground'
+          }`}>
+            {viewAllProjects 
+              ? `${projects.length} projects` 
+              : `${currentProject?.item_count || 0} items`
+            }
+          </span>
+          
+          {/* Chevron */}
+          <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${
+            isOpen ? 'rotate-90' : ''
+          } ${viewAllProjects ? 'text-indigo-200' : 'text-muted-foreground'}`} />
+        </button>
         
-        {/* Tooltip */}
-        <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-light z-50">
-          <div className="flex items-center gap-2">
-            <span>{currentProject?.name || 'Knowledge Bases'}</span>
-            <kbd className="px-1.5 py-0.5 text-xs bg-white/20 rounded">⌘P</kbd>
+        {/* Keyboard Shortcut Hint - only show when dropdown is closed */}
+        {!isOpen && (
+          <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+            <kbd className="px-1.5 py-0.5 bg-white/20 rounded">⌘P</kbd>
           </div>
-        </div>
-      </div>
-
-      {/* Project Selector Panel */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            ref={panelRef}
-            initial={{ opacity: 0, x: -10, scale: 0.95 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: -10, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="fixed left-20 top-6 z-50 w-80 bg-card border rounded-lg shadow-xl overflow-hidden"
-          >
+        )}
+        
+        {/* Project Selector Dropdown Panel - Positioned relative to button container */}
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              ref={panelRef}
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.15 }}
+              className="absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 w-80 bg-card border rounded-lg shadow-xl overflow-hidden"
+            >
             {/* Header */}
             <div className="p-3 border-b bg-muted/50">
               <div className="flex items-center gap-2 mb-2">
@@ -303,57 +476,117 @@ export function ProjectSelector() {
                 </div>
               ) : (
                 <div className="py-1">
-                  {sortedProjects.map((project) => (
-                    <button
-                      key={project.id}
-                      className={`w-full px-3 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left ${
-                        project.id === currentProject?.id ? 'bg-muted' : ''
-                      } ${project.is_archived ? 'opacity-60' : ''}`}
-                      onClick={() => handleSwitchProject(project.id)}
-                    >
-                      {/* Project Color Dot */}
-                      <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: project.color || '#6366f1' }}
-                      />
-                      
-                      {/* Project Icon */}
-                      <span className="flex-shrink-0">
-                        {renderProjectIcon(project.icon, 'w-4 h-4')}
-                      </span>
-                      
-                      {/* Project Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-sm truncate">
-                            {project.name}
-                          </span>
-                          {project.is_default && (
-                            <Badge variant="secondary" className="text-[10px] px-1 py-0">
-                              Default
+                  {/* All Projects Option */}
+                  {projects.length > 1 && !searchQuery && (
+                    <>
+                      <button
+                        className={`w-full px-3 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left ${
+                          viewAllProjects ? 'bg-indigo-500/10' : ''
+                        }`}
+                        onClick={handleSelectAll}
+                      >
+                        {/* Gradient Dot */}
+                        <div className="w-3 h-3 rounded-full flex-shrink-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
+                        
+                        {/* Layers Icon */}
+                        <span className="flex-shrink-0">
+                          <Layers className="w-4 h-4" />
+                        </span>
+                        
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">All Projects</span>
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400">
+                              Universe
                             </Badge>
-                          )}
-                          {project.is_archived && (
-                            <Archive className="w-3 h-3 text-muted-foreground" />
-                          )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{projects.length} projects</span>
+                            <span>•</span>
+                            <span>{totalItems} total items</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{project.item_count || 0} items</span>
-                          {project.region_count > 0 && (
-                            <>
-                              <span>•</span>
-                              <span>{project.region_count} regions</span>
-                            </>
-                          )}
-                        </div>
+                        
+                        {/* Current Indicator */}
+                        {viewAllProjects && (
+                          <Check className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                        )}
+                      </button>
+                      <div className="mx-3 my-1 border-t border-border/50" />
+                    </>
+                  )}
+                  
+                  {sortedProjects.map((project) => {
+                    // Only show as selected if this is the current project AND we're NOT in "All Projects" mode
+                    const isSelected = project.id === currentProject?.id && !viewAllProjects
+                    
+                    return (
+                      <div
+                        key={project.id}
+                        className={`group/item w-full px-3 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors ${
+                          isSelected ? 'bg-muted' : ''
+                        } ${project.is_archived ? 'opacity-60' : ''}`}
+                      >
+                        {/* Main clickable area */}
+                        <button
+                          className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                          onClick={() => handleSwitchProject(project.id)}
+                        >
+                          {/* Project Color Dot */}
+                          <div 
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: project.color || '#6366f1' }}
+                          />
+                          
+                          {/* Project Icon */}
+                          <span className="flex-shrink-0">
+                            {renderProjectIcon(project.icon, 'w-4 h-4')}
+                          </span>
+                          
+                          {/* Project Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-sm truncate">
+                                {project.name}
+                              </span>
+                              {project.is_default && (
+                                <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                                  Default
+                                </Badge>
+                              )}
+                              {project.is_archived && (
+                                <Archive className="w-3 h-3 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>{project.item_count || 0} items</span>
+                              {project.region_count > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span>{project.region_count} regions</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                        
+                        {/* Edit button - shows on hover */}
+                        <button
+                          className="flex-shrink-0 p-1.5 rounded hover:bg-muted opacity-0 group-hover/item:opacity-100 transition-opacity"
+                          onClick={(e) => handleEditProject(e, project)}
+                          title="Edit project"
+                        >
+                          <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                        </button>
+                        
+                        {/* Current Indicator - only show if selected AND not in "All Projects" mode */}
+                        {isSelected && (
+                          <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        )}
                       </div>
-                      
-                      {/* Current Indicator */}
-                      {project.id === currentProject?.id && (
-                        <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
-                      )}
-                    </button>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -387,9 +620,10 @@ export function ProjectSelector() {
                 </Button>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Create Project Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -487,6 +721,109 @@ export function ProjectSelector() {
                 <Plus className="w-4 h-4 mr-2" />
               )}
               Create Project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Pencil className="w-5 h-5" />
+              Edit Project
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Icon & Color Selection */}
+            <div className="flex items-center gap-4">
+              {/* Icon Preview */}
+              <div 
+                className="w-16 h-16 rounded-lg flex items-center justify-center border-2"
+                style={{ borderColor: editProjectColor, backgroundColor: `${editProjectColor}20` }}
+              >
+                {renderProjectIcon(editProjectIcon, 'w-8 h-8')}
+              </div>
+              
+              <div className="flex-1 space-y-2">
+                {/* Icon Options */}
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Icon</label>
+                  <div className="flex gap-1 flex-wrap max-h-24 overflow-y-auto">
+                    {iconOptions.map(({ name, Icon }) => (
+                      <button
+                        key={name}
+                        type="button"
+                        className={`w-7 h-7 rounded flex items-center justify-center hover:bg-muted transition-colors ${
+                          editProjectIcon === name ? 'bg-muted ring-2 ring-primary' : ''
+                        }`}
+                        onClick={() => setEditProjectIcon(name)}
+                        title={name}
+                      >
+                        <Icon className="w-4 h-4" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Color Options */}
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Color</label>
+                  <div className="flex gap-1 flex-wrap">
+                    {colorOptions.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${
+                          editProjectColor === color ? 'ring-2 ring-offset-2 ring-primary' : ''
+                        }`}
+                        style={{ backgroundColor: color }}
+                        onClick={() => setEditProjectColor(color)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Name Input */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Project Name</label>
+              <Input
+                placeholder="My Knowledge Base"
+                value={editProjectName}
+                onChange={(e) => setEditProjectName(e.target.value)}
+                autoFocus
+              />
+            </div>
+            
+            {/* Description Input */}
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Description (optional)</label>
+              <Input
+                placeholder="What is this project about?"
+                value={editProjectDescription}
+                onChange={(e) => setEditProjectDescription(e.target.value)}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveProject}
+              disabled={!editProjectName.trim() || projectsLoading}
+            >
+              {projectsLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Check className="w-4 h-4 mr-2" />
+              )}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
