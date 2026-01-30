@@ -500,19 +500,34 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
       .attr('stroke', '#999')
   }
 
-  // Fetch similarity connections from API (scoped to current project)
+  // Fetch similarity connections from API
+  // In universe mode: fetch ALL connections across all projects
+  // In normal mode: scope to current project
   useEffect(() => {
     const fetchConnections = async () => {
       try {
         setLoading(true)
-        // Build URL with project_id filter if a project is selected
+        
+        // Build URL - no project filter in universe mode to get cross-project connections
         let url = 'http://localhost:8080/api/v1/similarity/connections?threshold=0.15&max_per_item=5'
-        if (currentProject?.id) {
+        if (!universeMode && currentProject?.id) {
           url += `&project_id=${currentProject.id}`
         }
+        
         const response = await fetch(url)
         const data = await response.json()
         setConnections(data)
+        
+        // In universe mode, also fetch all items across all projects
+        if (universeMode) {
+          try {
+            const itemsResponse = await fetch('http://localhost:8080/api/v1/knowledge')
+            const allItemsData = await itemsResponse.json()
+            setAllItems(allItemsData)
+          } catch (err) {
+            console.error('Failed to fetch all items:', err)
+          }
+        }
       } catch (error) {
         console.error('Failed to fetch similarity connections:', error)
         setConnections([])
@@ -524,7 +539,29 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     if (items && items.length > 0) {
       fetchConnections()
     }
-  }, [items, currentProject?.id])
+  }, [items, currentProject?.id, universeMode])
+  
+  // Compute project centroids for clustering forces
+  const projectCentroids = useMemo(() => {
+    if (!universeMode || !projects || projects.length === 0) return new Map()
+    
+    const centroids = new Map()
+    const numProjects = projects.length
+    const angleStep = (2 * Math.PI) / numProjects
+    
+    // Arrange projects in a circle around the center
+    projects.forEach((project, index) => {
+      const angle = index * angleStep - Math.PI / 2 // Start from top
+      centroids.set(project.id, {
+        x: width / 2 + Math.cos(angle) * PROJECT_SPREAD,
+        y: height / 2 + Math.sin(angle) * PROJECT_SPREAD,
+        color: project.color || '#6366f1',
+        name: project.name
+      })
+    })
+    
+    return centroids
+  }, [universeMode, projects, width, height])
 
   // Fetch regions when component mounts
   useEffect(() => {
@@ -726,8 +763,24 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
         .distance(d => 150 / (d.similarity + 0.1)) // Closer for higher similarity
       )
       .force('charge', d3.forceManyBody().strength(-300))
-      .force('center', d3.forceCenter(width / 2, height / 2))
       .force('collision', d3.forceCollide().radius(30))
+    
+    // In universe mode, add project clustering forces instead of center force
+    if (universeMode && projectCentroids.size > 0) {
+      // Pull nodes toward their project's centroid
+      simulation
+        .force('projectX', d3.forceX(d => {
+          const centroid = projectCentroids.get(d.project_id)
+          return centroid ? centroid.x : width / 2
+        }).strength(0.3))
+        .force('projectY', d3.forceY(d => {
+          const centroid = projectCentroids.get(d.project_id)
+          return centroid ? centroid.y : height / 2
+        }).strength(0.3))
+    } else {
+      // Normal mode: center force
+      simulation.force('center', d3.forceCenter(width / 2, height / 2))
+    }
 
     // Add links
     const link = g.append('g')
@@ -893,7 +946,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     return () => {
       simulation.stop()
     }
-  }, [items, connections, width, height, loading, isDarkMode, regions])
+  }, [items, connections, width, height, loading, isDarkMode, regions, universeMode, projectCentroids])
   
   // Separate effect for region hover updates (doesn't restart simulation)
   useEffect(() => {
@@ -1370,6 +1423,43 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
         </DialogContent>
       </Dialog>
       
+      {/* Universe Mode Toggle - Shows all projects */}
+      {projects && projects.length > 1 && (
+        <div className="absolute top-6 left-6 z-40">
+          <div className="group relative">
+            <Button
+              size="icon"
+              onClick={() => setUniverseMode(!universeMode)}
+              className={`h-12 w-12 rounded-full shadow-lg transition-colors ${
+                universeMode
+                  ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                  : 'bg-card hover:bg-muted text-foreground'
+              }`}
+            >
+              <Layers className="w-5 h-5" />
+            </Button>
+            <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-light">
+              {universeMode ? 'Exit Universe Mode' : 'Knowledge Universe'}
+              <span className="ml-1.5 px-1.5 py-0.5 bg-indigo-600 text-white rounded text-xs">
+                {projects.length} projects
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Universe Mode Indicator */}
+      {universeMode && (
+        <div className="absolute top-6 left-20 z-40 bg-indigo-600/90 backdrop-blur-md px-4 py-2 rounded-full shadow-lg">
+          <div className="flex items-center gap-2 text-white text-sm font-medium">
+            <Layers className="w-4 h-4" />
+            <span>Knowledge Universe</span>
+            <span className="text-indigo-200">•</span>
+            <span className="text-indigo-200">{projects.length} projects</span>
+          </div>
+        </div>
+      )}
+
       {/* Info/Legend Button - Circular like nav items */}
       <div className="absolute bottom-6 right-6 z-40">
         <div className="group relative">
