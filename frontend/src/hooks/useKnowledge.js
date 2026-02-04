@@ -3,18 +3,29 @@
  */
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '@/lib/api'
+import { useStore } from '@/store/useStore'
 
 export function useKnowledge() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  
+  // Get project filtering state from store
+  const { currentProject, viewAllProjects } = useStore()
 
-  // Load all items
+  // Load all items with project filtering
   const loadItems = useCallback(async (params = {}) => {
     try {
       setLoading(true)
       setError(null)
-      const data = await api.getItems(params)
+      
+      // Apply project filter if not viewing all projects
+      const queryParams = { ...params }
+      if (currentProject?.id && !viewAllProjects) {
+        queryParams.project_id = currentProject.id
+      }
+      
+      const data = await api.getItems(queryParams)
       setItems(data)
     } catch (err) {
       setError(err)
@@ -22,9 +33,9 @@ export function useKnowledge() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [currentProject?.id, viewAllProjects])
 
-  // Initial load
+  // Reload items when project filter changes
   useEffect(() => {
     loadItems()
   }, [loadItems])
@@ -86,13 +97,20 @@ export function useKnowledge() {
     }
   }
 
-  // Search items
+  // Search items (respects project filter)
   const searchItems = async (query) => {
     try {
       setLoading(true)
       setError(null)
       const results = await api.search(query)
-      setItems(results)
+      
+      // Filter results by project if not viewing all projects
+      let filteredResults = results
+      if (currentProject?.id && !viewAllProjects) {
+        filteredResults = results.filter(item => item.project_id === currentProject.id)
+      }
+      
+      setItems(filteredResults)
     } catch (err) {
       setError(err)
       console.error('Search failed:', err)
