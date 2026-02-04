@@ -603,7 +603,7 @@ function App() {
                             </div>
                           </div>
                           <CardTitle 
-                            className={`${densityClasses.title} font-light leading-snug line-clamp-2`}
+                            className={`${densityClasses.title} font-normal leading-snug line-clamp-2`}
                             title={item.title}
                           >
                             {truncateTitle(item.title, 70)}

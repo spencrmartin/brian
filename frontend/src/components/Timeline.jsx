@@ -352,7 +352,7 @@ export function Timeline({
                           </div>
                         </div>
                         <CardTitle 
-                          className="text-base font-light leading-snug" 
+                          className="text-base font-normal leading-snug" 
                           title={item.title}
                         >
                           {truncateTitle(item.title, 80)}

@@ -49,7 +49,7 @@ export default function KnowledgeCard({ item, index }) {
             <div className="flex items-center gap-2">
               <span className="text-2xl">{getItemTypeEmoji(item.item_type)}</span>
               <div className="flex-1">
-                <h3 className="font-semibold text-lg leading-tight group-hover:text-primary transition-colors">
+                <h3 className="font-normal text-lg leading-tight group-hover:text-primary transition-colors">
                   {item.title}
                 </h3>
               </div>

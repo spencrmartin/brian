@@ -199,7 +199,7 @@ export function ItemDetailSheet({
           {/* Content - Scrollable */}
           <div className="px-6 py-6 overflow-y-auto flex-1">
             {/* Title */}
-            <h3 className="font-semibold text-xl mb-4 leading-snug">
+            <h3 className="font-normal text-xl mb-4 leading-snug">
               {item.title}
             </h3>
             
