@@ -5,8 +5,13 @@ import { motion } from 'framer-motion'
 import { Star, ArrowUp, ArrowDown, Edit, Trash2, ExternalLink } from 'lucide-react'
 import { getItemTypeEmoji, truncateText, formatRelativeTime } from '../lib/utils'
 import { toast } from 'sonner'
+import CodeSnippetCard from './CodeSnippetCard'
 
 export default function KnowledgeCard({ item, index }) {
+  // Use CodeSnippetCard for code/snippet types
+  if (item.item_type === 'code' || item.item_type === 'snippet') {
+    return <CodeSnippetCard item={item} index={index} />
+  }
   const { openModal, toggleFavorite, voteItem, deleteItem } = useStore()
 
   const handleDelete = async () => {

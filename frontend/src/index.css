@@ -31,6 +31,13 @@
     --accent-h: 217;
     --accent-s: 91%;
     --accent-l: 60%;
+    
+    /* Code snippet styling - Light Mode */
+    --code-bg: 220 13% 95%;
+    --code-border: 220 13% 88%;
+    --code-line-number: 220 9% 55%;
+    --code-header-bg: 220 13% 91%;
+    --code-scrollbar: 220 9% 75%;
   }
 
   .dark {
@@ -54,6 +61,13 @@
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 0 0% 83.1%;
+    
+    /* Code snippet styling - Dark Mode */
+    --code-bg: 220 13% 10%;
+    --code-border: 220 13% 18%;
+    --code-line-number: 220 9% 45%;
+    --code-header-bg: 220 13% 14%;
+    --code-scrollbar: 220 9% 30%;
   }
 }
 
