@@ -6,6 +6,7 @@ import { Star, ArrowUp, ArrowDown, Edit, Trash2, ExternalLink } from 'lucide-rea
 import { getItemTypeEmoji, truncateText, formatRelativeTime } from '../lib/utils'
 import { toast } from 'sonner'
 import CodeSnippetCard from './CodeSnippetCard'
+import ContentPreview from './ContentPreview'
 
 export default function KnowledgeCard({ item, index }) {
   // Use CodeSnippetCard for code/snippet types
@@ -112,9 +113,9 @@ export default function KnowledgeCard({ item, index }) {
         </CardHeader>
 
         <CardContent className="flex-1 pb-3">
-          <p className="text-sm text-muted-foreground line-clamp-4">
-            {truncateText(item.content, 200)}
-          </p>
+          <div className="line-clamp-4">
+            <ContentPreview content={item.content} maxLength={200} />
+          </div>
 
           {item.tags && item.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">

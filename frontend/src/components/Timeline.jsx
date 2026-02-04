@@ -11,10 +11,11 @@ import {
   Code2, 
   FileCode
 } from 'lucide-react'
-import { truncateTitle, truncateText } from '@/lib/utils'
+import { truncateTitle } from '@/lib/utils'
 import LinkPreview from './LinkPreview'
 import { ProjectPill } from './ProjectPill'
 import { ItemDetailSheet } from './ItemDetailSheet'
+import ContentPreview from './ContentPreview'
 
 export function Timeline({ 
   items = [], 
@@ -362,9 +363,9 @@ export function Timeline({
                       </CardHeader>
                       
                       <CardContent className="pb-3">
-                        <p className="text-sm text-muted-foreground mb-3">
-                          {truncateText(item.content, 200)}
-                        </p>
+                        <div className="mb-3">
+                          <ContentPreview content={item.content} maxLength={200} />
+                        </div>
                         
                         {item.url && (
                           <a

@@ -24,7 +24,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { truncateTitle, truncateText } from '@/lib/utils'
+import { truncateTitle } from '@/lib/utils'
+import ContentPreview from '@/components/ContentPreview'
 import { 
   Plus, 
   Settings as SettingsIcon, 
@@ -617,9 +618,9 @@ function App() {
                         </CardHeader>
                         
                         <CardContent className={`flex-1 ${densityClasses.cardContent}`}>
-                          <p className={`${densityClasses.text} text-muted-foreground line-clamp-4 mb-3`}>
-                            {truncateText(item.content, 150)}
-                          </p>
+                          <div className={`${densityClasses.text} line-clamp-4 mb-3`}>
+                            <ContentPreview content={item.content} maxLength={150} />
+                          </div>
                           
                           {item.url && (
                             <a

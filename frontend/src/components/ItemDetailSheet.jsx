@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ProjectPill } from './ProjectPill'
 import { Highlight, themes } from 'prism-react-renderer'
+import MarkdownContent from './MarkdownContent'
 import { 
   Link as LinkIcon, 
   FileText, 
@@ -274,10 +275,10 @@ export function ItemDetailSheet({
                 </div>
               </div>
             ) : (
-              /* Regular Content */
-              <p className="text-base text-muted-foreground mb-4 leading-relaxed whitespace-pre-wrap">
-                {item.content}
-              </p>
+              /* Regular Content with Markdown/Code Rendering */
+              <div className="mb-4 text-muted-foreground">
+                <MarkdownContent content={item.content} />
+              </div>
             )}
             
             {/* URL */}
