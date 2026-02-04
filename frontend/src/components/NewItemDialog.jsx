@@ -36,13 +36,18 @@ import {
   Quote,
   Link as LinkIcon,
   Minus,
+  FileText,
+  Code2,
+  FileCode,
+  Sparkles,
 } from 'lucide-react'
 
 const ITEM_TYPES = [
-  { value: 'link', label: '🔗 Link', icon: '🔗' },
-  { value: 'note', label: '📝 Note', icon: '📝' },
-  { value: 'code', label: '💻 Code', icon: '💻' },
-  { value: 'paper', label: '📄 Paper', icon: '📄' },
+  { value: 'note', label: 'Note', Icon: FileText },
+  { value: 'link', label: 'Link', Icon: LinkIcon },
+  { value: 'code', label: 'Code', Icon: Code2 },
+  { value: 'paper', label: 'Paper', Icon: FileCode },
+  { value: 'custom', label: 'Custom', Icon: Sparkles },
 ]
 
 // Markdown formatting toolbar button
@@ -68,11 +73,18 @@ const ToolbarButton = ({ icon: Icon, label, onClick, shortcut }) => (
   </TooltipProvider>
 )
 
+// Get the icon component for a type
+const getTypeIcon = (typeValue) => {
+  const type = ITEM_TYPES.find(t => t.value === typeValue)
+  return type?.Icon || FileText
+}
+
 export function NewItemDialog({ open, onOpenChange, onSubmit }) {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
     item_type: 'note',
+    custom_type: '',
     url: '',
     language: '',
     tags: '',
@@ -224,10 +236,15 @@ export function NewItemDialog({ open, onOpenChange, onSubmit }) {
         .map(tag => tag.trim())
         .filter(tag => tag.length > 0)
 
+      // Use custom_type if type is 'custom', otherwise use the selected type
+      const itemType = formData.item_type === 'custom' 
+        ? formData.custom_type.toLowerCase().trim()
+        : formData.item_type
+
       const data = {
         title: formData.title,
         content: formData.content,
-        item_type: formData.item_type,
+        item_type: itemType,
         tags,
       }
 
@@ -242,6 +259,7 @@ export function NewItemDialog({ open, onOpenChange, onSubmit }) {
         title: '',
         content: '',
         item_type: 'note',
+        custom_type: '',
         url: '',
         language: '',
         tags: '',
@@ -297,7 +315,7 @@ export function NewItemDialog({ open, onOpenChange, onSubmit }) {
 
           <div className="grid gap-4 py-4 flex-1 overflow-y-auto pr-2">
             {/* Top row: Type and Title side by side */}
-            <div className="grid grid-cols-[180px_1fr] gap-4">
+            <div className="grid grid-cols-[200px_1fr] gap-4">
               {/* Item Type */}
               <div className="grid gap-2">
                 <Label htmlFor="item_type">Type</Label>
@@ -306,19 +324,67 @@ export function NewItemDialog({ open, onOpenChange, onSubmit }) {
                   onValueChange={(value) => handleChange('item_type', value)}
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue>
+                      {(() => {
+                        const type = ITEM_TYPES.find(t => t.value === formData.item_type)
+                        if (type) {
+                          const Icon = type.Icon
+                          return (
+                            <span className="flex items-center gap-2">
+                              <Icon className="h-4 w-4" />
+                              {type.label}
+                            </span>
+                          )
+                        }
+                        return formData.item_type
+                      })()}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {ITEM_TYPES.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
+                    {ITEM_TYPES.map((type) => {
+                      const Icon = type.Icon
+                      return (
+                        <SelectItem key={type.value} value={type.value}>
+                          <span className="flex items-center gap-2">
+                            <Icon className="h-4 w-4" />
+                            {type.label}
+                          </span>
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* Title */}
+              {/* Custom Type Name - only show when custom is selected */}
+              {formData.item_type === 'custom' ? (
+                <div className="grid gap-2">
+                  <Label htmlFor="custom_type">Custom Type Name *</Label>
+                  <Input
+                    id="custom_type"
+                    value={formData.custom_type}
+                    onChange={(e) => handleChange('custom_type', e.target.value)}
+                    placeholder="e.g., recipe, bookmark, idea..."
+                    required
+                  />
+                </div>
+              ) : (
+                /* Title */
+                <div className="grid gap-2">
+                  <Label htmlFor="title">Title *</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => handleChange('title', e.target.value)}
+                    placeholder="Enter a descriptive title..."
+                    required
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Title - show separately when custom type is selected */}
+            {formData.item_type === 'custom' && (
               <div className="grid gap-2">
                 <Label htmlFor="title">Title *</Label>
                 <Input
@@ -329,7 +395,7 @@ export function NewItemDialog({ open, onOpenChange, onSubmit }) {
                   required
                 />
               </div>
-            </div>
+            )}
 
             {/* Content with toolbar */}
             <div className="grid gap-2 flex-1">
