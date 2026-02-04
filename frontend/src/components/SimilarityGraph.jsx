@@ -18,6 +18,7 @@ import { Loader2, Tag, Info, Link as LinkIcon, FileText, Code2, FileCode, Map as
 import { useStore } from '@/store/useStore'
 import { RegionEditDialog } from './RegionEditDialog'
 import { ProjectPill } from './ProjectPill'
+import { ItemDetailSheet } from './ItemDetailSheet'
 
 // Distance multiplier for spreading projects apart
 const PROJECT_SPREAD = 2000
@@ -1709,114 +1710,12 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
         </div>
       )}
 
-      {/* Bottom Sheet Blade - Selected node */}
+      {/* Bottom Sheet - Using shared ItemDetailSheet component */}
       {selectedNode && (
-        <>
-          {/* Backdrop */}
-          <div 
-            className="fixed inset-0 z-40 animate-in fade-in duration-200"
-            onClick={() => setSelectedNode(null)}
-          />
-          
-          {/* Bottom Sheet */}
-          <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-[400px] lg:w-[75vw] z-50 animate-in slide-in-from-bottom duration-300">
-            <div className="bg-card rounded-t-2xl shadow-lg border-t border-x border-border max-h-[80vh] overflow-y-auto">
-              {/* Handle bar */}
-              <div className="flex justify-center pt-3 pb-2">
-                <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
-              </div>
-              
-              {/* Card Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                <div className="flex items-center gap-3">
-                  {selectedNode.item_type === 'link' && <LinkIcon className="w-5 h-5" />}
-                  {selectedNode.item_type === 'note' && <FileText className="w-5 h-5" />}
-                  {selectedNode.item_type === 'code' && <Code2 className="w-5 h-5" />}
-                  {selectedNode.item_type === 'paper' && <FileCode className="w-5 h-5" />}
-                  <span className="text-sm text-muted-foreground capitalize font-medium">{selectedNode.item_type}</span>
-                  {selectedNode.project_id && (
-                    <ProjectPill projectId={selectedNode.project_id} size="sm" />
-                  )}
-                </div>
-                <button
-                  onClick={() => setSelectedNode(null)}
-                  className="text-muted-foreground hover:text-foreground transition-colors p-2 hover:bg-muted rounded-full"
-                >
-                  ✕
-                </button>
-              </div>
-              
-              {/* Card Content */}
-              <div className="px-6 py-6">
-                <h3 className="font-semibold text-xl mb-3 leading-snug">
-                  {selectedNode.title}
-                </h3>
-                
-                <p className="text-base text-muted-foreground mb-4 leading-relaxed">
-                  {selectedNode.content}
-                </p>
-                
-                {selectedNode.url && (
-                  <a
-                    href={selectedNode.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline flex items-center gap-2 mb-4 p-3 bg-primary/10 rounded-lg"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <LinkIcon className="w-4 h-4 flex-shrink-0" />
-                    <span className="truncate">{selectedNode.url}</span>
-                  </a>
-                )}
-                
-                {selectedNode.language && (
-                  <div className="mb-4">
-                    <Badge variant="outline" className="text-sm px-3 py-1">{selectedNode.language}</Badge>
-                  </div>
-                )}
-                
-                {selectedNode.tags && selectedNode.tags.length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="text-sm font-semibold mb-2 text-muted-foreground">Tags</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedNode.tags.map((tag, i) => (
-                        <Badge 
-                          key={i} 
-                          variant="secondary" 
-                          className="text-sm px-3 py-1.5 cursor-pointer hover:scale-110 transition-transform"
-                          style={{
-                            backgroundColor: `${getThemeColor(tag)}20`,
-                            borderColor: getThemeColor(tag),
-                            color: getThemeColor(tag),
-                            borderWidth: '1px'
-                          }}
-                          onMouseEnter={() => handleThemeHover(tag)}
-                          onMouseLeave={handleThemeHoverEnd}
-                        >
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {selectedNode.created_at && (
-                  <div className="pt-4 border-t">
-                    <p className="text-sm text-muted-foreground">
-                      Created {new Date(selectedNode.created_at).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </>
+        <ItemDetailSheet
+          item={selectedNode}
+          onClose={() => setSelectedNode(null)}
+        />
       )}
 
       {/* Edit Region Dialog */}
