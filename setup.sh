@@ -285,7 +285,7 @@ cat > stop.sh << 'EOF'
 #!/bin/bash
 
 # Brian - Stop Script
-# Stops both backend and frontend servers
+# Stops both backend and frontend servers (including all child processes)
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
@@ -296,6 +296,20 @@ BLUE='\033[0;34m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+# Kill a process and all its descendants (process tree).
+# Needed because pnpm run dev spawns child processes (node/vite, esbuild)
+# that survive when only the pnpm parent is killed.
+kill_tree() {
+    local pid=$1
+    [ -z "$pid" ] && return
+    # Kill children first (recursive)
+    for child in $(ps -o pid= --ppid "$pid" 2>/dev/null); do
+        [ -n "$child" ] && kill_tree "$child"
+    done
+    # Kill the process itself
+    kill "$pid" 2>/dev/null
+}
+
 echo -e "${BLUE}Stopping Brian...${NC}"
 echo ""
 
@@ -304,7 +318,7 @@ if [ -f .backend.pid ]; then
     BACKEND_PID=$(cat .backend.pid)
     if ps -p $BACKEND_PID > /dev/null 2>&1; then
         echo -e "${BLUE}Stopping backend (PID: $BACKEND_PID)...${NC}"
-        kill $BACKEND_PID
+        kill_tree $BACKEND_PID
         echo -e "${GREEN}✓ Backend stopped${NC}"
     else
         echo -e "${RED}Backend process not found${NC}"
@@ -319,7 +333,7 @@ if [ -f .frontend.pid ]; then
     FRONTEND_PID=$(cat .frontend.pid)
     if ps -p $FRONTEND_PID > /dev/null 2>&1; then
         echo -e "${BLUE}Stopping frontend (PID: $FRONTEND_PID)...${NC}"
-        kill $FRONTEND_PID
+        kill_tree $FRONTEND_PID
         echo -e "${GREEN}✓ Frontend stopped${NC}"
     else
         echo -e "${RED}Frontend process not found${NC}"
