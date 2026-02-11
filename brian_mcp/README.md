@@ -139,6 +139,63 @@ Get all unique tags in the knowledge base.
 {}
 ```
 
+### Connections Tools
+
+Explicit connections between knowledge items for the graph and relationship tracking.
+
+#### create_connection
+Create an explicit connection between two items.
+
+```json
+{
+  "source_item_id": "uuid-of-source",
+  "target_item_id": "uuid-of-target",
+  "connection_type": "related",   // optional: related, references, extracted_from, inspired_by, etc.
+  "strength": 1.0,                 // optional: 0.0-1.0
+  "notes": "Optional notes"
+}
+```
+
+#### get_item_connections
+Get all explicit connections for an item (both as source and target).
+
+```json
+{
+  "item_id": "uuid-of-item"
+}
+```
+
+#### update_connection
+Update an existing connection's type, strength, or notes.
+
+```json
+{
+  "connection_id": 42,
+  "connection_type": "references",  // optional
+  "strength": 0.8,                  // optional
+  "notes": "Updated notes"           // optional
+}
+```
+
+#### delete_connection
+Delete an explicit connection.
+
+```json
+{
+  "connection_id": 42
+}
+```
+
+#### debug_item_connections
+Debug why an item might not be showing connections in the graph. Shows similarity scores and identifies potential issues.
+
+```json
+{
+  "item_id": "uuid-of-item",
+  "show_all": false   // optional: show all similarity scores, even very low ones
+}
+```
+
 ## Available Resources
 
 ### brian://stats

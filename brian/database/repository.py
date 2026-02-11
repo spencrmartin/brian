@@ -410,6 +410,27 @@ class ConnectionRepository:
         cursor = self.db.execute(query, (connection_id,))
         return cursor.rowcount > 0
 
+    def get_by_id(self, connection_id: int) -> Optional[Connection]:
+        """Get a connection by ID"""
+        query = "SELECT * FROM connections WHERE id = ?"
+        row = self.db.fetchone(query, (connection_id,))
+        if not row:
+            return None
+        return Connection.from_db_row(dict(row))
+
+    def update(self, connection_id: int, **kwargs) -> Optional[Connection]:
+        """Update a connection's type, strength, or notes"""
+        allowed = {"connection_type", "strength", "notes"}
+        updates = {k: v for k, v in kwargs.items() if k in allowed}
+        if not updates:
+            return self.get_by_id(connection_id)
+
+        set_parts = [f"{k} = ?" for k in updates]
+        params = list(updates.values()) + [connection_id]
+        query = f"UPDATE connections SET {', '.join(set_parts)} WHERE id = ?"
+        self.db.execute(query, tuple(params))
+        return self.get_by_id(connection_id)
+
 
 class RegionRepository:
     """Repository for knowledge region operations"""
