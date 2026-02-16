@@ -978,14 +978,6 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
         .attr('fill', skillColor)
         .attr('fill-opacity', 0.25)
         .attr('stroke', 'none')
-      
-      // Add brain emoji in center
-      skillGroup.append('text')
-        .attr('text-anchor', 'middle')
-        .attr('dy', '0.35em')
-        .attr('font-size', 12)
-        .attr('pointer-events', 'none')
-        .text('🧠')
     })
 
     // Store node reference for theme highlighting
