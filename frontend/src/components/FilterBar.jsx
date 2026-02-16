@@ -1,7 +1,7 @@
 import { useStore } from '../store/useStore'
 import { Button } from './ui/button'
 import { motion } from 'framer-motion'
-import { Link, FileText, Code, File, Star } from 'lucide-react'
+import { Link, FileText, Code, File, Star, Brain } from 'lucide-react'
 
 export default function FilterBar() {
   const { filters, setFilters, fetchItems } = useStore()
@@ -12,6 +12,7 @@ export default function FilterBar() {
     { id: 'note', label: 'Notes', icon: FileText },
     { id: 'snippet', label: 'Snippets', icon: Code },
     { id: 'paper', label: 'Papers', icon: File },
+    { id: 'skill', label: 'Skills', icon: Brain },
   ]
 
   const sortOptions = [

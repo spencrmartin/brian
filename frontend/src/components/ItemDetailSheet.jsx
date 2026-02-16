@@ -14,7 +14,12 @@ import {
   ExternalLink,
   Copy,
   Check,
-  X
+  X,
+  Brain,
+  Package,
+  FileCode2,
+  BookOpen,
+  Image as ImageIcon
 } from 'lucide-react'
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
@@ -94,12 +99,21 @@ export function ItemDetailSheet({
   if (!item) return null
 
   const isCodeItem = item.item_type === 'code' || item.item_type === 'snippet'
+  const isSkill = item.item_type === 'skill'
   const language = (item.language || 'javascript').toLowerCase()
   const langConfig = LANGUAGE_CONFIG[language] || { 
     name: language.charAt(0).toUpperCase() + language.slice(1), 
     color: '#6b7280', 
     textColor: '#fff' 
   }
+  
+  // Extract skill metadata
+  const skillMeta = item.skill_metadata || {}
+  const bundledResources = skillMeta.bundled_resources || {}
+  const scriptCount = bundledResources.scripts?.length || 0
+  const referenceCount = bundledResources.references?.length || 0
+  const assetCount = bundledResources.assets?.length || 0
+  const totalResources = scriptCount + referenceCount + assetCount
 
   return (
     <>
@@ -124,7 +138,13 @@ export function ItemDetailSheet({
               {item.item_type === 'note' && <FileText className="w-5 h-5" />}
               {(item.item_type === 'code' || item.item_type === 'snippet') && <Code2 className="w-5 h-5" />}
               {item.item_type === 'paper' && <FileCode className="w-5 h-5" />}
+              {item.item_type === 'skill' && <Brain className="w-5 h-5 text-pink-500" />}
               <span className="text-sm text-muted-foreground capitalize font-medium">{item.item_type}</span>
+              {isSkill && (
+                <Badge className="bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300 border-pink-300 dark:border-pink-700">
+                  Anthropic Skill
+                </Badge>
+              )}
               {item.project_id && (
                 <ProjectPill projectId={item.project_id} size="sm" />
               )}
@@ -278,6 +298,58 @@ export function ItemDetailSheet({
               /* Regular Content with Markdown/Code Rendering */
               <div className="mb-4 text-muted-foreground">
                 <MarkdownContent content={item.content} />
+              </div>
+            )}
+            
+            {/* Skill Metadata Section */}
+            {isSkill && skillMeta && (
+              <div className="mb-4 p-4 bg-pink-50 dark:bg-pink-950/30 rounded-lg border border-pink-200 dark:border-pink-900">
+                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2 text-pink-700 dark:text-pink-300">
+                  <Brain className="w-4 h-4" />
+                  Skill Information
+                </h4>
+                
+                {skillMeta.description && (
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {skillMeta.description}
+                  </p>
+                )}
+                
+                {totalResources > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Package className="w-4 h-4" />
+                      <span>Bundled Resources ({totalResources})</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-2 ml-6">
+                      {scriptCount > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <FileCode2 className="w-3 h-3" />
+                          <span>{scriptCount} script{scriptCount !== 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                      {referenceCount > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <BookOpen className="w-3 h-3" />
+                          <span>{referenceCount} reference{referenceCount !== 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                      {assetCount > 0 && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <ImageIcon className="w-3 h-3" />
+                          <span>{assetCount} asset{assetCount !== 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {skillMeta.license && (
+                  <p className="text-xs text-muted-foreground mt-3 pt-3 border-t border-pink-200 dark:border-pink-900">
+                    License: {skillMeta.license}
+                  </p>
+                )}
               </div>
             )}
             
