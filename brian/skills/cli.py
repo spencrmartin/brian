@@ -85,13 +85,11 @@ def import_skill_command(args):
         # Connect to database
         db = Database()
         db.initialize()
-        repo = KnowledgeRepository(db.connect())
+        repo = KnowledgeRepository(db)
         
         # Check if skill already exists
-        existing_skills = repo.search_items(
-            query=f"Skill: {skill_data['name']}",
-            item_type='skill'
-        )
+        all_items = repo.get_all()
+        existing_skills = [item for item in all_items if item.item_type.value == 'skill' and skill_data['name'] in item.title]
         
         if existing_skills and not args.force:
             print(f"⚠️  Skill '{skill_data['name']}' already exists.")
@@ -114,7 +112,8 @@ def import_skill_command(args):
         )
         
         # Save to database
-        item_id = repo.create_item(skill_item)
+        created_item = repo.create(skill_item)
+        item_id = created_item.id
         
         print(f"✅ Successfully imported skill '{skill_data['name']}'")
         print(f"   ID: {item_id}")
@@ -165,13 +164,11 @@ def import_all_command(args):
                 # Connect to database
                 db = Database()
                 db.initialize()
-                repo = KnowledgeRepository(db.connect())
+                repo = KnowledgeRepository(db)
                 
                 # Check if exists
-                existing = repo.search_items(
-                    query=f"Skill: {skill_data['name']}",
-                    item_type='skill'
-                )
+                all_items = repo.get_all()
+                existing = [item for item in all_items if item.item_type.value == 'skill' and skill_data['name'] in item.title]
                 
                 if existing and not args.force:
                     print("⏭️  (already exists)")
@@ -192,7 +189,7 @@ def import_all_command(args):
                     tags=item_data.get('tags', []),
                 )
                 
-                repo.create_item(skill_item)
+                repo.create(skill_item)
                 db.close()
                 
                 print("✅")

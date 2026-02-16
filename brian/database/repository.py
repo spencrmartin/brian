@@ -21,14 +21,20 @@ class KnowledgeRepository:
     
     def create(self, item: KnowledgeItem) -> KnowledgeItem:
         """Create a new knowledge item"""
+        # Serialize skill_metadata to JSON if present
+        import json
+        skill_metadata_json = None
+        if item.skill_metadata:
+            skill_metadata_json = json.dumps(item.skill_metadata)
+        
         # If created_at is provided, use it; otherwise let DB use default
         if item.created_at:
             query = """
                 INSERT INTO knowledge_items 
                 (id, title, content, item_type, url, language, favorite, vote_count, 
                  created_at, updated_at, accessed_at, link_title, link_description, link_image, link_site_name,
-                 pinboard_x, pinboard_y, project_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 pinboard_x, pinboard_y, project_id, skill_metadata)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             created_at_str = item.created_at.isoformat()
             self.db.execute(query, (
@@ -49,14 +55,15 @@ class KnowledgeRepository:
                 item.link_site_name,
                 item.pinboard_x,
                 item.pinboard_y,
-                item.project_id
+                item.project_id,
+                skill_metadata_json
             ))
         else:
             query = """
                 INSERT INTO knowledge_items 
                 (id, title, content, item_type, url, language, favorite, vote_count,
-                 link_title, link_description, link_image, link_site_name, pinboard_x, pinboard_y, project_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 link_title, link_description, link_image, link_site_name, pinboard_x, pinboard_y, project_id, skill_metadata)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             self.db.execute(query, (
                 item.id,
@@ -73,7 +80,8 @@ class KnowledgeRepository:
                 item.link_site_name,
                 item.pinboard_x,
                 item.pinboard_y,
-                item.project_id
+                item.project_id,
+                skill_metadata_json
             ))
         
         # Add tags if provided
