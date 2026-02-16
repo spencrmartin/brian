@@ -63,7 +63,30 @@ export function getItemTypeEmoji(type) {
     link: '🔗',
     note: '📝',
     code: '💻',
-    paper: '📄'
+    paper: '📄',
+    skill: '🧠'
   }
   return emojiMap[type] || '📄'
+}
+
+export function getItemTypeLabel(type) {
+  const labelMap = {
+    link: 'Link',
+    note: 'Note',
+    code: 'Code',
+    paper: 'Paper',
+    skill: 'Skill'
+  }
+  return labelMap[type] || 'Unknown'
+}
+
+export function getItemTypeColor(type) {
+  const colorMap = {
+    link: 'bg-blue-500',
+    note: 'bg-green-500',
+    code: 'bg-purple-500',
+    paper: 'bg-orange-500',
+    skill: 'bg-pink-500'
+  }
+  return colorMap[type] || 'bg-gray-500'
 }

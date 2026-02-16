@@ -14,6 +14,7 @@ class ItemType(str, Enum):
     NOTE = "note"
     SNIPPET = "snippet"
     PAPER = "paper"
+    SKILL = "skill"  # Anthropic skills from skills repository
 
 
 class RegionType(str, Enum):
@@ -134,6 +135,8 @@ class KnowledgeItem:
     pinboard_y: Optional[float] = None
     # Project association
     project_id: Optional[str] = None
+    # Skill-specific metadata (JSON string when stored in DB)
+    skill_metadata: Optional[dict] = None  # For SKILL type: {name, description, license, source_url, source_commit, bundled_resources}
     
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization"""
@@ -157,6 +160,7 @@ class KnowledgeItem:
             "pinboard_x": self.pinboard_x,
             "pinboard_y": self.pinboard_y,
             "project_id": self.project_id,
+            "skill_metadata": self.skill_metadata,
         }
     
     @classmethod
@@ -176,6 +180,16 @@ class KnowledgeItem:
     @classmethod
     def from_db_row(cls, row: dict, tags: List[str] = None) -> 'KnowledgeItem':
         """Create from database row"""
+        import json
+        
+        # Parse skill_metadata if it's a JSON string
+        skill_metadata = row.get('skill_metadata')
+        if skill_metadata and isinstance(skill_metadata, str):
+            try:
+                skill_metadata = json.loads(skill_metadata)
+            except json.JSONDecodeError:
+                skill_metadata = None
+        
         return cls(
             id=row['id'],
             title=row['title'],
@@ -196,6 +210,7 @@ class KnowledgeItem:
             pinboard_x=row.get('pinboard_x'),
             pinboard_y=row.get('pinboard_y'),
             project_id=row.get('project_id'),
+            skill_metadata=skill_metadata,
         )
 
 

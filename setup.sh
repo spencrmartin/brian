@@ -221,13 +221,31 @@ NC='\033[0m'
 echo -e "${BLUE}🧠 Starting Brian...${NC}"
 echo ""
 
+# Find pnpm (check common locations)
+PNPM_CMD=$(command -v pnpm 2>/dev/null || echo "/opt/homebrew/bin/pnpm")
+if [ ! -x "$PNPM_CMD" ] && [ ! -f "$PNPM_CMD" ]; then
+    # Try to find it in other common locations
+    for path in /usr/local/bin/pnpm ~/.npm-global/bin/pnpm; do
+        if [ -x "$path" ]; then
+            PNPM_CMD="$path"
+            break
+        fi
+    done
+fi
+
+if [ ! -x "$PNPM_CMD" ] && [ ! -f "$PNPM_CMD" ]; then
+    echo -e "${RED}Error: pnpm not found${NC}"
+    echo "Please install pnpm: npm install -g pnpm"
+    exit 1
+fi
+
 # Check if frontend dependencies are installed
 if [ ! -d "frontend/node_modules" ] || [ ! -f "frontend/node_modules/.bin/vite" ]; then
     echo -e "${YELLOW}Frontend dependencies missing or corrupted. Installing...${NC}"
     cd frontend
     rm -rf node_modules pnpm-lock.yaml 2>/dev/null
     
-    pnpm install
+    "$PNPM_CMD" install
     
     if [ $? -ne 0 ]; then
         echo -e "${RED}Failed to install frontend dependencies${NC}"
@@ -253,16 +271,51 @@ sleep 2
 # Start frontend in background
 echo -e "${BLUE}Starting frontend server...${NC}"
 cd frontend
-pnpm run dev > ../frontend.log 2>&1 &
+"$PNPM_CMD" run dev > ../frontend.log 2>&1 &
 FRONTEND_PID=$!
 cd ..
 echo -e "${GREEN}✓ Frontend started (PID: $FRONTEND_PID)${NC}"
+
+# Wait for frontend to start and detect the actual port
+echo -e "${BLUE}Detecting frontend port...${NC}"
+FRONTEND_PORT=""
+for i in {1..15}; do
+    sleep 1
+    # Try multiple methods to detect the port
+    if [ -f "frontend.log" ]; then
+        # Method 1: Look for "Local: http://localhost:PORT" in log
+        FRONTEND_PORT=$(grep -oE "Local:.*http://localhost:[0-9]+" frontend.log 2>/dev/null | tail -1 | grep -oE "[0-9]+$")
+        
+        # Method 2: Look for just "http://localhost:PORT" if method 1 fails
+        if [ -z "$FRONTEND_PORT" ]; then
+            FRONTEND_PORT=$(grep -oE "http://localhost:[0-9]+" frontend.log 2>/dev/null | tail -1 | grep -oE "[0-9]+$")
+        fi
+        
+        if [ -n "$FRONTEND_PORT" ]; then
+            break
+        fi
+    fi
+    
+    # Method 3: Check what port the process is actually listening on
+    if [ -z "$FRONTEND_PORT" ]; then
+        FRONTEND_PORT=$(lsof -Pan -p "$FRONTEND_PID" -i 2>/dev/null | grep LISTEN | grep -oE ":[0-9]+" | head -1 | tr -d ':')
+    fi
+    
+    if [ -n "$FRONTEND_PORT" ]; then
+        break
+    fi
+done
 
 echo ""
 echo -e "${GREEN}✨ Brian is running!${NC}"
 echo ""
 echo "  Backend:  http://localhost:8080"
-echo "  Frontend: http://localhost:5173"
+if [ -n "$FRONTEND_PORT" ]; then
+    echo -e "  Frontend: ${GREEN}http://localhost:$FRONTEND_PORT${NC}"
+else
+    echo "  Frontend: http://localhost:5173 (detecting...)"
+    echo -e "            ${YELLOW}Check 'tail -f frontend.log' for actual port${NC}"
+fi
 echo ""
 echo "  Backend logs:  tail -f backend.log"
 echo "  Frontend logs: tail -f frontend.log"

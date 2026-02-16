@@ -21,6 +21,7 @@ from brian.database.repository import KnowledgeRepository, RegionRepository, Reg
 from brian.services.similarity import SimilarityService
 from brian.services.link_preview import fetch_link_metadata, is_google_doc
 from brian.models.knowledge_item import KnowledgeItem, ItemType, Region, RegionType, RegionProfile, ContextStrategy, PROFILE_TEMPLATES, Project, DEFAULT_PROJECT_ID
+from brian.skills import list_available_skills, fetch_skill, skill_to_knowledge_item, SkillImportError
 
 from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions, Server
@@ -717,6 +718,98 @@ For simple web links without document content:
                         "type": "integer",
                         "description": "Maximum number of items to return (default: 20)",
                         "default": 20
+                    }
+                }
+            }
+        ),
+        # Skills tools - Anthropic skills repository integration
+        Tool(
+            name="list_skills",
+            description="List all available skills from Anthropic's skills repository. Skills are specialized prompts and workflows that extend AI capabilities.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "github_token": {
+                        "type": "string",
+                        "description": "Optional GitHub token for higher rate limits (5000/hour vs 60/hour)"
+                    }
+                }
+            }
+        ),
+        Tool(
+            name="get_skill",
+            description="Get detailed information about a specific skill from Anthropic's repository, including metadata, content, and bundled resources.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "skill_name": {
+                        "type": "string",
+                        "description": "Name of the skill (e.g., 'skill-creator', 'mcp-builder', 'algorithmic-art')"
+                    },
+                    "github_token": {
+                        "type": "string",
+                        "description": "Optional GitHub token for higher rate limits"
+                    }
+                },
+                "required": ["skill_name"]
+            }
+        ),
+        Tool(
+            name="search_skills",
+            description="Search for skills by name or description. Returns skills matching the query from both Anthropic's repository and imported skills in Brian.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query (e.g., 'document', 'MCP', 'design')"
+                    },
+                    "source": {
+                        "type": "string",
+                        "enum": ["all", "anthropic", "imported"],
+                        "description": "Search source: 'all' (both), 'anthropic' (repository only), 'imported' (Brian only)",
+                        "default": "all"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of results",
+                        "default": 10
+                    }
+                },
+                "required": ["query"]
+            }
+        ),
+        Tool(
+            name="import_skill",
+            description="Import a skill from Anthropic's repository into Brian's knowledge base. Makes the skill searchable and accessible in your knowledge graph.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "skill_name": {
+                        "type": "string",
+                        "description": "Name of the skill to import"
+                    },
+                    "project_id": {
+                        "type": "string",
+                        "description": "Optional project ID to import into (uses default if not specified)"
+                    },
+                    "github_token": {
+                        "type": "string",
+                        "description": "Optional GitHub token for higher rate limits"
+                    }
+                },
+                "required": ["skill_name"]
+            }
+        ),
+        Tool(
+            name="get_imported_skills",
+            description="List all skills that have been imported into Brian's knowledge base.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "project_id": {
+                        "type": "string",
+                        "description": "Optional project ID to filter by"
                     }
                 }
             }
@@ -1881,6 +1974,223 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
                 "tags": item.tags,
                 "url": item.url
             } for item in items]
+        }
+        
+        return [TextContent(
+            type="text",
+            text=json.dumps(response, indent=2)
+        )]
+    
+    # Skills tool handlers
+    elif name == "list_skills":
+        github_token = arguments.get("github_token")
+        
+        try:
+            skills = list_available_skills(github_token)
+            
+            response = {
+                "count": len(skills),
+                "skills": [{
+                    "name": skill["name"],
+                    "url": skill["url"],
+                    "path": skill["path"]
+                } for skill in skills]
+            }
+            
+            return [TextContent(
+                type="text",
+                text=json.dumps(response, indent=2)
+            )]
+            
+        except SkillImportError as e:
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": str(e)})
+            )]
+    
+    elif name == "get_skill":
+        skill_name = arguments["skill_name"]
+        github_token = arguments.get("github_token")
+        
+        try:
+            skill_data = fetch_skill(skill_name, github_token)
+            
+            # Count bundled resources
+            resource_count = sum(len(files) for files in skill_data['bundled_resources'].values())
+            
+            response = {
+                "name": skill_data["name"],
+                "metadata": skill_data["frontmatter"],
+                "content": skill_data["content"],
+                "source_url": skill_data["source_url"],
+                "bundled_resources": skill_data["bundled_resources"],
+                "resource_count": resource_count
+            }
+            
+            return [TextContent(
+                type="text",
+                text=json.dumps(response, indent=2)
+            )]
+            
+        except SkillImportError as e:
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": str(e)})
+            )]
+    
+    elif name == "search_skills":
+        query = arguments["query"]
+        source = arguments.get("source", "all")
+        limit = arguments.get("limit", 10)
+        
+        results = []
+        query_lower = query.lower()
+        
+        try:
+            # Search Anthropic repository if requested
+            if source in ["all", "anthropic"]:
+                github_token = arguments.get("github_token")
+                available_skills = list_available_skills(github_token)
+                
+                for skill in available_skills:
+                    # Simple name matching for now
+                    if query_lower in skill["name"].lower():
+                        results.append({
+                            "name": skill["name"],
+                            "source": "anthropic",
+                            "url": skill["url"],
+                            "imported": False
+                        })
+            
+            # Search imported skills if requested
+            if source in ["all", "imported"]:
+                imported = repo.search(query, item_type="skill")
+                
+                for item in imported[:limit]:
+                    skill_meta = item.skill_metadata or {}
+                    results.append({
+                        "name": skill_meta.get("name", item.title),
+                        "source": "imported",
+                        "id": item.id,
+                        "title": item.title,
+                        "description": skill_meta.get("description", ""),
+                        "url": item.url,
+                        "imported": True,
+                        "created_at": item.created_at.isoformat() if item.created_at else None
+                    })
+            
+            response = {
+                "query": query,
+                "count": len(results[:limit]),
+                "results": results[:limit]
+            }
+            
+            return [TextContent(
+                type="text",
+                text=json.dumps(response, indent=2)
+            )]
+            
+        except SkillImportError as e:
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": str(e)})
+            )]
+    
+    elif name == "import_skill":
+        skill_name = arguments["skill_name"]
+        project_id = arguments.get("project_id")
+        github_token = arguments.get("github_token")
+        
+        try:
+            # Fetch skill from Anthropic repository
+            skill_data = fetch_skill(skill_name, github_token)
+            
+            # Use default project if not specified
+            if not project_id:
+                default_project = project_repo.get_default()
+                if default_project:
+                    project_id = default_project.id
+            
+            # Convert to knowledge item
+            item_data = skill_to_knowledge_item(skill_data, project_id)
+            
+            # Check if already imported
+            existing = repo.search(f"Skill: {skill_data['name']}", item_type="skill")
+            
+            if existing:
+                return [TextContent(
+                    type="text",
+                    text=json.dumps({
+                        "warning": f"Skill '{skill_name}' is already imported",
+                        "existing_item_id": existing[0].id,
+                        "message": "Use update_knowledge_item to modify it, or delete and reimport"
+                    })
+                )]
+            
+            # Create skill item
+            skill_item = KnowledgeItem(
+                title=item_data['title'],
+                content=item_data['content'],
+                item_type=ItemType.SKILL,
+                url=item_data['url'],
+                skill_metadata=item_data['skill_metadata'],
+                project_id=item_data.get('project_id'),
+                tags=item_data.get('tags', []),
+            )
+            
+            created_item = repo.create(skill_item)
+            
+            # Count resources
+            bundled = skill_data['bundled_resources']
+            resource_count = sum(len(files) for files in bundled.values())
+            
+            response = {
+                "success": True,
+                "skill_name": skill_data['name'],
+                "item_id": created_item.id,
+                "source_url": skill_data['source_url'],
+                "resource_count": resource_count,
+                "bundled_resources": {
+                    k: len(v) for k, v in bundled.items() if v
+                },
+                "message": f"Successfully imported skill '{skill_name}' into Brian"
+            }
+            
+            return [TextContent(
+                type="text",
+                text=json.dumps(response, indent=2)
+            )]
+            
+        except SkillImportError as e:
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": str(e)})
+            )]
+        except Exception as e:
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": f"Unexpected error: {str(e)}"})
+            )]
+    
+    elif name == "get_imported_skills":
+        project_id = arguments.get("project_id")
+        
+        # Get all skill items
+        all_items = repo.get_all(project_id=project_id)
+        skills = [item for item in all_items if item.item_type == ItemType.SKILL]
+        
+        response = {
+            "count": len(skills),
+            "skills": [{
+                "id": item.id,
+                "title": item.title,
+                "name": item.skill_metadata.get("name") if item.skill_metadata else None,
+                "description": item.skill_metadata.get("description") if item.skill_metadata else None,
+                "source_url": item.url,
+                "tags": item.tags,
+                "created_at": item.created_at.isoformat() if item.created_at else None,
+                "bundled_resources": item.skill_metadata.get("bundled_resources") if item.skill_metadata else None
+            } for item in skills]
         }
         
         return [TextContent(

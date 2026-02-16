@@ -2,7 +2,7 @@
 Database schema for brian - inspired by Goose's SQLite architecture
 """
 
-SCHEMA_VERSION = 6  # Added projects table and project_id foreign keys
+SCHEMA_VERSION = 7  # Added skill_metadata column for skills integration
 
 # Schema creation SQL statements
 SCHEMA_SQL = """
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS knowledge_items (
     id TEXT PRIMARY KEY,  -- UUID
     title TEXT NOT NULL,
     content TEXT NOT NULL,  -- Markdown content
-    item_type TEXT NOT NULL,  -- 'link', 'note', 'snippet', 'paper'
+    item_type TEXT NOT NULL,  -- 'link', 'note', 'snippet', 'paper', 'skill'
     url TEXT,  -- For links and papers
     language TEXT,  -- For code snippets
     favorite BOOLEAN DEFAULT FALSE,
@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS knowledge_items (
     pinboard_x REAL,  -- X position on pinboard canvas
     pinboard_y REAL,  -- Y position on pinboard canvas
     project_id TEXT,  -- Associated project (knowledge base)
+    skill_metadata TEXT,  -- JSON metadata for skills: {name, description, license, source_url, source_commit, bundled_resources}
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
 );
 

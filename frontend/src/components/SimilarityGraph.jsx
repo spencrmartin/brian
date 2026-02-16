@@ -818,8 +818,8 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
 
     // Color scale for node types
     const colorScale = d3.scaleOrdinal()
-      .domain(['link', 'note', 'snippet', 'paper'])
-      .range(['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'])
+      .domain(['link', 'note', 'snippet', 'paper', 'skill'])
+      .range(['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899']) // Added pink for skills
 
     // Create SVG
     const svg = d3.select(svgRef.current)
@@ -896,17 +896,89 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     // Store link label reference for semantic zoom
     linkLabelElementsRef.current = linkLabel
 
-    // Add nodes
-    const node = g.append('g')
-      .attr('stroke', '#fff')
-      .attr('stroke-width', 1.5)
-      .selectAll('circle')
+    // Add nodes with special handling for skills (cloud appearance)
+    const nodeGroup = g.append('g')
+      .attr('class', 'nodes')
+    
+    // Create node groups for each item
+    const node = nodeGroup
+      .selectAll('g.node')
       .data(nodes)
-      .join('circle')
-      .attr('r', 8)
-      .attr('fill', d => colorScale(d.type))
+      .join('g')
+      .attr('class', 'node')
       .style('cursor', 'pointer')
       .call(drag(simulation))
+    
+    // For regular nodes (not skills), add a single circle
+    node.filter(d => d.type !== 'skill')
+      .append('circle')
+      .attr('r', 8)
+      .attr('fill', d => colorScale(d.type))
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 1.5)
+    
+    // For skill nodes, create a cloud effect with multiple overlapping circles
+    const skillNodes = node.filter(d => d.type === 'skill')
+    
+    // Add glow filter for skills
+    const defs = svg.append('defs')
+    const filter = defs.append('filter')
+      .attr('id', 'skill-glow')
+      .attr('x', '-50%')
+      .attr('y', '-50%')
+      .attr('width', '200%')
+      .attr('height', '200%')
+    
+    filter.append('feGaussianBlur')
+      .attr('stdDeviation', '3')
+      .attr('result', 'coloredBlur')
+    
+    const feMerge = filter.append('feMerge')
+    feMerge.append('feMergeNode').attr('in', 'coloredBlur')
+    feMerge.append('feMergeNode').attr('in', 'SourceGraphic')
+    
+    // Create cloud structure for each skill node
+    skillNodes.each(function(d) {
+      const skillGroup = d3.select(this)
+      const skillColor = colorScale(d.type) // Pink
+      
+      // Add multiple circles to create cloud effect
+      // Center circle (largest)
+      skillGroup.append('circle')
+        .attr('r', 12)
+        .attr('fill', skillColor)
+        .attr('fill-opacity', 0.3)
+        .attr('stroke', skillColor)
+        .attr('stroke-width', 2)
+        .attr('filter', 'url(#skill-glow)')
+      
+      // Top-left bubble
+      skillGroup.append('circle')
+        .attr('cx', -6)
+        .attr('cy', -6)
+        .attr('r', 7)
+        .attr('fill', skillColor)
+        .attr('fill-opacity', 0.25)
+        .attr('stroke', 'none')
+      
+      // Top-right bubble
+      skillGroup.append('circle')
+        .attr('cx', 6)
+        .attr('cy', -6)
+        .attr('r', 6)
+        .attr('fill', skillColor)
+        .attr('fill-opacity', 0.25)
+        .attr('stroke', 'none')
+      
+      // Bottom bubble
+      skillGroup.append('circle')
+        .attr('cx', 0)
+        .attr('cy', 8)
+        .attr('r', 8)
+        .attr('fill', skillColor)
+        .attr('fill-opacity', 0.25)
+        .attr('stroke', 'none')
+    })
 
     // Store node reference for theme highlighting
     nodeElementsRef.current = node
@@ -931,9 +1003,24 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
     // Add hover effects for nodes
     node
       .on('mouseover', function(event, d) {
-        d3.select(this)
-          .attr('r', 12)
-          .attr('stroke-width', 3)
+        const nodeGroup = d3.select(this)
+        
+        // For regular nodes, scale up the circle
+        if (d.type !== 'skill') {
+          nodeGroup.select('circle')
+            .attr('r', 12)
+            .attr('stroke-width', 3)
+        } else {
+          // For skill nodes, scale up all circles in the cloud
+          nodeGroup.selectAll('circle')
+            .transition()
+            .duration(200)
+            .attr('r', function() {
+              const currentR = parseFloat(d3.select(this).attr('r'))
+              return currentR * 1.3
+            })
+            .attr('stroke-width', 3)
+        }
         
         // Highlight connected links
         link
@@ -950,9 +1037,24 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
         // Don't reset if we're hovering a theme
         if (hoveredTheme) return
         
-        d3.select(this)
-          .attr('r', 8)
-          .attr('stroke-width', 1.5)
+        const nodeGroup = d3.select(this)
+        
+        // For regular nodes, reset circle
+        if (d.type !== 'skill') {
+          nodeGroup.select('circle')
+            .attr('r', 8)
+            .attr('stroke-width', 1.5)
+        } else {
+          // For skill nodes, reset all circles
+          nodeGroup.selectAll('circle')
+            .transition()
+            .duration(200)
+            .attr('r', function() {
+              const currentR = parseFloat(d3.select(this).attr('r'))
+              return currentR / 1.3
+            })
+            .attr('stroke-width', 2)
+        }
         
         // Reset links
         link
@@ -1078,9 +1180,9 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
         .attr('x', d => (d.source.x + d.target.x) / 2)
         .attr('y', d => (d.source.y + d.target.y) / 2)
 
+      // Position node groups (works for both single circles and cloud groups)
       node
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y)
+        .attr('transform', d => `translate(${d.x},${d.y})`)
 
       label
         .attr('x', d => d.x)
@@ -1677,6 +1779,14 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-violet-500"></div>
                   <span className="text-xs">Papers</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <div className="w-3 h-3 rounded-full bg-pink-500 opacity-30 absolute"></div>
+                    <div className="w-2 h-2 rounded-full bg-pink-500 opacity-40 absolute top-0.5 left-0.5"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-pink-500"></div>
+                  </div>
+                  <span className="text-xs ml-2">Skills (cloud)</span>
                 </div>
               </div>
             </div>

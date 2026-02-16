@@ -117,6 +117,10 @@ MIGRATIONS = {
                UPDATE projects SET updated_at = CURRENT_TIMESTAMP
                WHERE id = NEW.id;
            END""",
+    ],
+    7: [
+        # Add skill_metadata column for Anthropic skills integration
+        "ALTER TABLE knowledge_items ADD COLUMN skill_metadata TEXT",
     ]
 }
 
