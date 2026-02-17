@@ -361,6 +361,24 @@ Parameters:
 - item_id: UUID of the item
 ```
 
+#### `update_knowledge_item`
+Update an existing knowledge item's content, tags, or other properties.
+```
+Parameters:
+- item_id: UUID of the item to update
+- title: Optional new title
+- content: Optional new content
+- tags: Optional new tags list
+- url: Optional new URL
+```
+
+#### `delete_knowledge_item`
+Delete a knowledge item from the database. This action cannot be undone.
+```
+Parameters:
+- item_id: UUID of the item to delete
+```
+
 ### Project Management
 
 #### `list_projects`
@@ -438,6 +456,45 @@ Debug similarity connections for an item.
 ```
 Parameters:
 - item_id: UUID of the item to debug
+```
+
+### Connection Management
+
+Explicit connections between knowledge items for the graph and relationship tracking.
+
+#### `create_connection`
+Create an explicit connection between two items.
+```
+Parameters:
+- source_item_id: UUID of the source item
+- target_item_id: UUID of the target item
+- connection_type: Optional - related, references, extracted_from, inspired_by, etc.
+- strength: Optional - 0.0 to 1.0 (default: 1.0)
+- notes: Optional notes about the connection
+```
+
+#### `get_item_connections`
+Get all explicit connections for an item.
+```
+Parameters:
+- item_id: UUID of the item
+```
+
+#### `update_connection`
+Update an existing connection.
+```
+Parameters:
+- connection_id: ID of the connection to update
+- connection_type: Optional new type
+- strength: Optional new strength 0.0-1.0
+- notes: Optional new notes
+```
+
+#### `delete_connection`
+Delete an explicit connection between items.
+```
+Parameters:
+- connection_id: ID of the connection to delete
 ```
 
 ## 📊 Similarity Algorithm

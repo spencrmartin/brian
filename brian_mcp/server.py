@@ -17,10 +17,10 @@ from typing import Any, Optional
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from brian.database.connection import Database
-from brian.database.repository import KnowledgeRepository, RegionRepository, RegionProfileRepository, ProjectRepository
+from brian.database.repository import KnowledgeRepository, RegionRepository, RegionProfileRepository, ProjectRepository, ConnectionRepository
 from brian.services.similarity import SimilarityService
 from brian.services.link_preview import fetch_link_metadata, is_google_doc
-from brian.models.knowledge_item import KnowledgeItem, ItemType, Region, RegionType, RegionProfile, ContextStrategy, PROFILE_TEMPLATES, Project, DEFAULT_PROJECT_ID
+from brian.models.knowledge_item import KnowledgeItem, ItemType, Region, RegionType, RegionProfile, ContextStrategy, PROFILE_TEMPLATES, Project, DEFAULT_PROJECT_ID, Connection
 from brian.skills import list_available_skills, fetch_skill, skill_to_knowledge_item, SkillImportError
 
 from mcp.server.models import InitializationOptions
@@ -47,12 +47,13 @@ repo: Optional[KnowledgeRepository] = None
 region_repo: Optional[RegionRepository] = None
 profile_repo: Optional[RegionProfileRepository] = None
 project_repo: Optional[ProjectRepository] = None
+conn_repo: Optional[ConnectionRepository] = None
 similarity_service: Optional[SimilarityService] = None
 
 
 def init_services():
     """Initialize database connection and services"""
-    global repo, region_repo, profile_repo, project_repo, similarity_service
+    global repo, region_repo, profile_repo, project_repo, conn_repo, similarity_service
     db_path = os.path.expanduser("~/.brian/brian.db")
     db = Database(db_path)
     # Don't call initialize() - it breaks FTS queries in autocommit mode
@@ -61,6 +62,7 @@ def init_services():
     region_repo = RegionRepository(db)
     profile_repo = RegionProfileRepository(db)
     project_repo = ProjectRepository(db)
+    conn_repo = ConnectionRepository(db)
     similarity_service = SimilarityService()
 
 
@@ -401,6 +403,20 @@ For simple web links without document content:
                     "url": {
                         "type": "string",
                         "description": "New URL (optional)"
+                    }
+                },
+                "required": ["item_id"]
+            }
+        ),
+        Tool(
+            name="delete_knowledge_item",
+            description="Delete a knowledge item from the database. This action cannot be undone.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "string",
+                        "description": "ID of the item to delete"
                     }
                 },
                 "required": ["item_id"]
@@ -814,6 +830,66 @@ For simple web links without document content:
                 }
             }
         ),
+        # Connections tools
+        Tool(
+            name="create_connection",
+            description="Create an explicit connection between two knowledge items.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "source_item_id": {"type": "string", "description": "ID of the source item"},
+                    "target_item_id": {"type": "string", "description": "ID of the target item"},
+                    "connection_type": {
+                        "type": "string",
+                        "description": "Type of connection (e.g. 'related', 'references', 'extracted_from', 'inspired_by')",
+                        "default": "related"
+                    },
+                    "strength": {
+                        "type": "number",
+                        "description": "Connection strength 0.0-1.0 (default: 1.0)",
+                        "default": 1.0
+                    },
+                    "notes": {"type": "string", "description": "Optional notes about the connection"}
+                },
+                "required": ["source_item_id", "target_item_id"]
+            }
+        ),
+        Tool(
+            name="get_item_connections",
+            description="Get all explicit connections for a given knowledge item.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "item_id": {"type": "string", "description": "ID of the item"}
+                },
+                "required": ["item_id"]
+            }
+        ),
+        Tool(
+            name="update_connection",
+            description="Update an existing connection's type, strength, or notes.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "connection_id": {"type": "integer", "description": "ID of the connection to update"},
+                    "connection_type": {"type": "string", "description": "New connection type"},
+                    "strength": {"type": "number", "description": "New strength 0.0-1.0"},
+                    "notes": {"type": "string", "description": "New notes"}
+                },
+                "required": ["connection_id"]
+            }
+        ),
+        Tool(
+            name="delete_connection",
+            description="Delete an explicit connection between items.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "connection_id": {"type": "integer", "description": "ID of the connection to delete"}
+                },
+                "required": ["connection_id"]
+            }
+        ),
     ]
 
 
@@ -1194,6 +1270,42 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
                 "updated_at": updated_item.updated_at.isoformat() if updated_item.updated_at else None,
             }
         }
+        
+        return [TextContent(
+            type="text",
+            text=json.dumps(response, indent=2)
+        )]
+    
+    elif name == "delete_knowledge_item":
+        item_id = arguments["item_id"]
+        
+        # Check if item exists first
+        item = repo.get_by_id(item_id)
+        if not item:
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": f"Item {item_id} not found", "success": False})
+            )]
+        
+        # Store item details for confirmation message
+        item_title = item.title
+        item_type = item.item_type.value if hasattr(item.item_type, 'value') else str(item.item_type)
+        
+        # Delete the item
+        success = repo.delete(item_id)
+        
+        if success:
+            response = {
+                "success": True,
+                "message": f"Deleted {item_type}: {item_title}",
+                "item_id": item_id
+            }
+        else:
+            response = {
+                "success": False,
+                "error": "Failed to delete item",
+                "item_id": item_id
+            }
         
         return [TextContent(
             type="text",
@@ -1979,6 +2091,75 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
         return [TextContent(
             type="text",
             text=json.dumps(response, indent=2)
+        )]
+
+    elif name == "create_connection":
+        source_id = arguments["source_item_id"]
+        target_id = arguments["target_item_id"]
+        if not repo.get_by_id(source_id):
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": f"Source item {source_id} not found"})
+            )]
+        if not repo.get_by_id(target_id):
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": f"Target item {target_id} not found"})
+            )]
+        connection = Connection(
+            source_item_id=source_id,
+            target_item_id=target_id,
+            connection_type=arguments.get("connection_type", "related"),
+            strength=arguments.get("strength", 1.0),
+            notes=arguments.get("notes")
+        )
+        created = conn_repo.create(connection)
+        return [TextContent(
+            type="text",
+            text=json.dumps(created.to_dict(), indent=2)
+        )]
+
+    elif name == "get_item_connections":
+        item_id = arguments["item_id"]
+        connections = conn_repo.get_for_item(item_id)
+        result = []
+        for conn in connections:
+            d = conn.to_dict()
+            src = repo.get_by_id(conn.source_item_id)
+            tgt = repo.get_by_id(conn.target_item_id)
+            d["source_title"] = src.title if src else None
+            d["target_title"] = tgt.title if tgt else None
+            result.append(d)
+        return [TextContent(
+            type="text",
+            text=json.dumps(result, indent=2)
+        )]
+
+    elif name == "update_connection":
+        connection_id = arguments["connection_id"]
+        kwargs = {k: v for k, v in arguments.items() if k != "connection_id" and v is not None}
+        updated = conn_repo.update(connection_id, **kwargs)
+        if not updated:
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": f"Connection {connection_id} not found"})
+            )]
+        return [TextContent(
+            type="text",
+            text=json.dumps(updated.to_dict(), indent=2)
+        )]
+
+    elif name == "delete_connection":
+        connection_id = arguments["connection_id"]
+        success = conn_repo.delete(connection_id)
+        if not success:
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": f"Connection {connection_id} not found"})
+            )]
+        return [TextContent(
+            type="text",
+            text=json.dumps({"success": True, "deleted": connection_id})
         )]
     
     # Skills tool handlers
