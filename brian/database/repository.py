@@ -198,7 +198,7 @@ class KnowledgeRepository:
         
         # First, search the FTS table to get matching item IDs
         fts_query = """
-            SELECT item_id, rank 
+            SELECT id, rank 
             FROM knowledge_search 
             WHERE knowledge_search MATCH ? 
             ORDER BY rank
@@ -212,7 +212,7 @@ class KnowledgeRepository:
             return []
         
         # Get the full item details for matching IDs using the regular db connection
-        item_ids = [row['item_id'] for row in fts_rows]
+        item_ids = [row['id'] for row in fts_rows]
         placeholders = ','.join('?' * len(item_ids))
         
         # Build query with optional project_id filter
@@ -230,7 +230,7 @@ class KnowledgeRepository:
             rows = self.db.fetchall(items_query, tuple(item_ids))
         
         # Create a map of id to rank for sorting
-        rank_map = {row['item_id']: idx for idx, row in enumerate(fts_rows)}
+        rank_map = {row['id']: idx for idx, row in enumerate(fts_rows)}
         
         items = []
         for row in rows:
