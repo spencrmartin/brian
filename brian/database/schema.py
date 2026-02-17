@@ -2,7 +2,7 @@
 Database schema for brian - inspired by Goose's SQLite architecture
 """
 
-SCHEMA_VERSION = 7  # Added skill_metadata column for skills integration
+SCHEMA_VERSION = 8  # FTS: item_id->id, remove tags (not in content table)
 
 # Schema creation SQL statements
 SCHEMA_SQL = """
@@ -143,10 +143,9 @@ CREATE TABLE IF NOT EXISTS region_items (
 
 -- Full-text search virtual table
 CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_search USING fts5(
-    item_id UNINDEXED,
+    id UNINDEXED,
     title,
     content,
-    tags,
     content='knowledge_items',
     content_rowid='rowid'
 );
@@ -184,17 +183,17 @@ END;
 
 -- Trigger to sync FTS index
 CREATE TRIGGER IF NOT EXISTS knowledge_items_ai AFTER INSERT ON knowledge_items BEGIN
-    INSERT INTO knowledge_search(item_id, title, content)
+    INSERT INTO knowledge_search(id, title, content)
     VALUES (new.id, new.title, new.content);
 END;
 
 CREATE TRIGGER IF NOT EXISTS knowledge_items_ad AFTER DELETE ON knowledge_items BEGIN
-    DELETE FROM knowledge_search WHERE item_id = old.id;
+    DELETE FROM knowledge_search WHERE id = old.id;
 END;
 
 CREATE TRIGGER IF NOT EXISTS knowledge_items_au AFTER UPDATE ON knowledge_items BEGIN
     UPDATE knowledge_search SET title = new.title, content = new.content
-    WHERE item_id = new.id;
+    WHERE id = new.id;
 END;
 
 -- Trigger for regions updated_at timestamp

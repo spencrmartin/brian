@@ -121,7 +121,36 @@ MIGRATIONS = {
     7: [
         # Add skill_metadata column for Anthropic skills integration
         "ALTER TABLE knowledge_items ADD COLUMN skill_metadata TEXT",
-    ]
+    ],
+    8: [
+        # Rename FTS column item_id -> id for external content resolution
+        # FTS5 doesn't support ALTER; must drop, recreate, and repopulate
+        "DROP TRIGGER IF EXISTS knowledge_items_ai",
+        "DROP TRIGGER IF EXISTS knowledge_items_ad",
+        "DROP TRIGGER IF EXISTS knowledge_items_au",
+        "DROP TABLE IF EXISTS knowledge_search",
+        """CREATE VIRTUAL TABLE knowledge_search USING fts5(
+            id UNINDEXED,
+            title,
+            content,
+            content='knowledge_items',
+            content_rowid='rowid'
+        )""",
+        """CREATE TRIGGER knowledge_items_ai AFTER INSERT ON knowledge_items BEGIN
+            INSERT INTO knowledge_search(id, title, content)
+            VALUES (new.id, new.title, new.content);
+        END""",
+        """CREATE TRIGGER knowledge_items_ad AFTER DELETE ON knowledge_items BEGIN
+            DELETE FROM knowledge_search WHERE id = old.id;
+        END""",
+        """CREATE TRIGGER knowledge_items_au AFTER UPDATE ON knowledge_items BEGIN
+            UPDATE knowledge_search SET title = new.title, content = new.content
+            WHERE id = new.id;
+        END""",
+        # Repopulate FTS index from content table
+        """INSERT INTO knowledge_search(rowid, id, title, content)
+           SELECT rowid, id, title, content FROM knowledge_items""",
+    ],
 }
 
 def apply_migrations(conn, current_version: int, target_version: int):
