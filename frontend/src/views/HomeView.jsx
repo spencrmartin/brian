@@ -116,36 +116,6 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
   return (
     <div className="min-h-screen">
       <div className="max-w-7xl mx-auto pt-24 md:pt-40 px-4 md:px-32">
-        {/* PixelBlast Container */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8"
-        >
-          <div className={`relative w-32 h-32 rounded-3xl overflow-hidden backdrop-blur-xl shadow-2xl ${
-            isDarkMode
-              ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
-              : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
-          }`}>
-            {/* Frosted overlay effect */}
-            <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none z-10 ${
-              isDarkMode ? 'from-white/20' : 'from-black/10'
-            } to-transparent`} />
-            
-            {/* PixelBlast Effect */}
-            <div className="absolute inset-0">
-              <PixelBlast
-                pixelSize={3}
-                color={isDarkMode ? "#000000" : "#ffffff"}
-                patternScale={2.5}
-                patternDensity={1.2}
-                speed={0.4}
-              />
-            </div>
-          </div>
-        </motion.div>
-
         {/* Welcome Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -162,36 +132,68 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
         {/* Dashboard Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-0.5">
           
-          {/* Cool Fact Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card className={`relative overflow-hidden backdrop-blur-xl h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl ${
-              isDarkMode
-                ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
-                : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
-            }`}>
-              {/* Frosted overlay effect */}
-              <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none ${
-                isDarkMode ? 'from-white/20' : 'from-black/10'
-              } to-transparent`} />
-              
-              <div className="relative p-8 h-full flex flex-col justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-800/20' : 'bg-background/20'}`}>
-                    <Sparkles className={`w-5 h-5 ${isDarkMode ? 'text-gray-800' : 'text-background'}`} />
-                  </div>
-                  <h3 className={`text-lg font-light ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>Did you know?</h3>
-                </div>
+          {/* Left Column - PixelBlast + Did you know */}
+          <div className="flex flex-col gap-0.5">
+            {/* PixelBlast Container */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className={`relative h-32 rounded-3xl overflow-hidden backdrop-blur-xl shadow-2xl ${
+                isDarkMode
+                  ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
+                  : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
+              }`}>
+                {/* Frosted overlay effect */}
+                <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none z-10 ${
+                  isDarkMode ? 'from-white/20' : 'from-black/10'
+                } to-transparent`} />
                 
-                <p className={`text-2xl font-light leading-relaxed ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>
-                  {randomFact}
-                </p>
+                {/* PixelBlast Effect */}
+                <div className="absolute inset-0">
+                  <PixelBlast
+                    pixelSize={3}
+                    color={isDarkMode ? "#000000" : "#ffffff"}
+                    patternScale={2.5}
+                    patternDensity={1.2}
+                    speed={0.4}
+                  />
+                </div>
               </div>
-            </Card>
-          </motion.div>
+            </motion.div>
+          
+            {/* Cool Fact Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <Card className={`relative overflow-hidden backdrop-blur-xl h-[428px] group hover:shadow-2xl transition-all duration-300 rounded-3xl ${
+                isDarkMode
+                  ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
+                  : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
+              }`}>
+                {/* Frosted overlay effect */}
+                <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none ${
+                  isDarkMode ? 'from-white/20' : 'from-black/10'
+                } to-transparent`} />
+                
+                <div className="relative p-8 h-full flex flex-col justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-800/20' : 'bg-background/20'}`}>
+                      <Sparkles className={`w-5 h-5 ${isDarkMode ? 'text-gray-800' : 'text-background'}`} />
+                    </div>
+                    <h3 className={`text-lg font-light ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>Did you know?</h3>
+                  </div>
+                  
+                  <p className={`text-2xl font-light leading-relaxed ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>
+                    {randomFact}
+                  </p>
+                </div>
+              </Card>
+            </motion.div>
+          </div>
 
           {/* Recent Item Card */}
           <motion.div
