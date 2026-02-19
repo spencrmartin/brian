@@ -174,16 +174,6 @@ function App() {
 
       {/* Top Left Navigation - Icon Buttons */}
       <div className="fixed top-6 left-6 z-50 flex flex-col gap-2">
-        {/* Brain Logo Button */}
-        <div className="group relative">
-          <Button 
-            size="icon"
-            className="h-12 w-12 rounded-full shadow-lg bg-black hover:bg-gray-800"
-          >
-            <BrainLogo className="w-6 h-6 text-white" />
-          </Button>
-        </div>
-
         {/* Home Button */}
         <div className="group relative">
           <Button 
