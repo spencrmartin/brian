@@ -199,11 +199,14 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className={`relative overflow-hidden backdrop-blur-xl h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl ${
-              isDarkMode
-                ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
-                : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
-            }`}>
+            <Card 
+              className={`relative overflow-hidden backdrop-blur-xl h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl cursor-pointer ${
+                isDarkMode
+                  ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
+                  : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
+              }`}
+              onClick={() => recentItem && setDetailItem(recentItem)}
+            >
               <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none ${
                 isDarkMode ? 'from-white/20' : 'from-black/10'
               } to-transparent`} />
