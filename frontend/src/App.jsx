@@ -15,6 +15,7 @@ import { SimilarityGraph } from '@/components/SimilarityGraph'
 import { InfinitePinboard } from '@/components/InfinitePinboard'
 import { Timeline } from '@/components/Timeline'
 import { Settings } from '@/components/Settings'
+import HomeView from '@/views/HomeView'
 import LinkPreview from '@/components/LinkPreview'
 import Antigravity from '@/components/animations/Antigravity'
 import { ItemDetailSheet } from '@/components/ItemDetailSheet'
@@ -40,7 +41,8 @@ import {
   Network,
   Layers,
   Search,
-  LayoutGrid
+  LayoutGrid,
+  Home
 } from 'lucide-react'
 import './App.css'
 
@@ -82,7 +84,7 @@ function App() {
   }, [])
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedView, setSelectedView] = useState('feed')
+  const [selectedView, setSelectedView] = useState('home')
   const [newDialogOpen, setNewDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -184,6 +186,24 @@ function App() {
           >
             <BrainLogo className="w-6 h-6 text-white" />
           </Button>
+        </div>
+
+        {/* Home Button */}
+        <div className="group relative">
+          <Button 
+            size="icon"
+            className={`h-12 w-12 rounded-full shadow-lg transition-colors ${
+              selectedView === 'home' 
+                ? 'bg-black hover:bg-gray-800 text-white' 
+                : 'bg-card hover:bg-muted text-foreground'
+            }`}
+            onClick={() => setSelectedView('home')}
+          >
+            <Home className="w-5 h-5" />
+          </Button>
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-light">
+            Home
+          </div>
         </div>
 
         {/* Feed Button */}
@@ -431,6 +451,15 @@ function App() {
               </Button>
             </div>
           </div>
+        )}
+
+        {/* Home View - Dashboard with Frosted Cards */}
+        {!loading && !error && selectedView === 'home' && (
+          <HomeView 
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onToggleFavorite={toggleFavorite}
+          />
         )}
 
         {/* Feed View - Grid of Tiles */}

@@ -125,23 +125,28 @@ export function ItemDetailSheet({
       
       {/* Bottom Sheet */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[600px] lg:max-w-[75vw] z-50 animate-in slide-in-from-bottom duration-300">
-        <div className="bg-card rounded-t-2xl shadow-2xl border-t border-x border-border max-h-[85vh] overflow-hidden flex flex-col">
+        <div className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-background/95 via-background/90 to-background/85 rounded-t-3xl shadow-2xl border-t border-x border-border/50 max-h-[85vh] flex flex-col">
+          {/* Frosted overlay effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+          
           {/* Handle bar */}
-          <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
+          <div className="relative flex justify-center pt-3 pb-2 flex-shrink-0">
             <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
           </div>
           
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <div className="relative flex items-center justify-between px-6 py-4 border-b border-border/50 flex-shrink-0">
             <div className="flex items-center gap-3">
-              {item.item_type === 'link' && <LinkIcon className="w-5 h-5" />}
-              {item.item_type === 'note' && <FileText className="w-5 h-5" />}
-              {(item.item_type === 'code' || item.item_type === 'snippet') && <Code2 className="w-5 h-5" />}
-              {item.item_type === 'paper' && <FileCode className="w-5 h-5" />}
-              {item.item_type === 'skill' && <Brain className="w-5 h-5 text-pink-500" />}
-              <span className="text-sm text-muted-foreground capitalize font-medium">{item.item_type}</span>
+              <div className="p-2 rounded-full bg-accent/10">
+                {item.item_type === 'link' && <LinkIcon className="w-5 h-5" />}
+                {item.item_type === 'note' && <FileText className="w-5 h-5" />}
+                {(item.item_type === 'code' || item.item_type === 'snippet') && <Code2 className="w-5 h-5" />}
+                {item.item_type === 'paper' && <FileCode className="w-5 h-5" />}
+                {item.item_type === 'skill' && <Brain className="w-5 h-5 text-pink-500" />}
+              </div>
+              <span className="text-sm text-muted-foreground capitalize font-light">{item.item_type}</span>
               {isSkill && (
-                <Badge className="bg-pink-100 dark:bg-pink-900 text-pink-700 dark:text-pink-300 border-pink-300 dark:border-pink-700">
+                <Badge className="bg-pink-500/10 text-pink-500 border-pink-500/20 font-light">
                   Anthropic Skill
                 </Badge>
               )}
@@ -156,7 +161,7 @@ export function ItemDetailSheet({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9"
+                  className="h-9 w-9 rounded-full hover:bg-accent/10"
                   onClick={() => onToggleFavorite(item.id)}
                   title={item.is_favorite ? 'Unfavorite' : 'Favorite'}
                 >
@@ -167,7 +172,7 @@ export function ItemDetailSheet({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9"
+                className="h-9 w-9 rounded-full hover:bg-accent/10"
                 onClick={handleCopy}
                 title="Copy content"
               >
@@ -182,7 +187,7 @@ export function ItemDetailSheet({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9"
+                  className="h-9 w-9 rounded-full hover:bg-accent/10"
                   onClick={() => {
                     onEdit(item)
                     onClose()
@@ -197,7 +202,7 @@ export function ItemDetailSheet({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 hover:text-destructive"
+                  className="h-9 w-9 rounded-full hover:bg-destructive/10 hover:text-destructive"
                   onClick={handleDelete}
                   title="Delete"
                 >
@@ -208,7 +213,7 @@ export function ItemDetailSheet({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9"
+                className="h-9 w-9 rounded-full hover:bg-accent/10"
                 onClick={onClose}
               >
                 <X className="w-4 h-4" />
