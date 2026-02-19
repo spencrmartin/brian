@@ -142,10 +142,10 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <div className={`relative h-32 rounded-3xl overflow-hidden backdrop-blur-xl shadow-2xl ${
+              <div className={`relative h-32 rounded-3xl overflow-hidden ${
                 isDarkMode
-                  ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
-                  : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
+                  ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white'
+                  : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70'
               }`}>
                 {/* PixelBlast Effect */}
                 <div className="absolute inset-0">
@@ -299,10 +299,10 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
-              <div className={`relative h-32 rounded-3xl overflow-hidden backdrop-blur-xl shadow-2xl ${
+              <div className={`relative h-32 rounded-3xl overflow-hidden ${
                 isDarkMode
-                  ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
-                  : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
+                  ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white'
+                  : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70'
               }`}>
                 {/* PixelBlast Effect */}
                 <div className="absolute inset-0">
