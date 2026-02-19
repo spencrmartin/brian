@@ -22,6 +22,7 @@ import { truncateTitle } from '@/lib/utils'
 import ContentPreview from '@/components/ContentPreview'
 import { useKnowledge } from '@/hooks/useKnowledge'
 import { ItemDetailSheet } from '@/components/ItemDetailSheet'
+import PixelBlast from '@/components/PixelBlast'
 
 export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
   const { items, loadItems } = useKnowledge()
@@ -94,13 +95,38 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
   }
 
   return (
-    <div className="min-h-screen p-8 pt-32">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen">
+      <div className="max-w-7xl mx-auto pt-24 md:pt-40 px-4 md:px-32">
+        {/* PixelBlast Container */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8"
+        >
+          <div className="relative w-32 h-32 rounded-3xl overflow-hidden backdrop-blur-xl bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20 shadow-2xl">
+            {/* Frosted overlay effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent pointer-events-none z-10" />
+            
+            {/* PixelBlast Effect */}
+            <div className="absolute inset-0">
+              <PixelBlast
+                pixelSize={3}
+                color="#ffffff"
+                patternScale={2.5}
+                patternDensity={1.2}
+                speed={0.4}
+              />
+            </div>
+          </div>
+        </motion.div>
+
         {/* Welcome Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-12"
+          transition={{ delay: 0.2 }}
+          className="mb-12 md:mb-16"
         >
           <h1 className="text-5xl font-light mb-2">Welcome back</h1>
           <p className="text-muted-foreground text-lg font-light">
@@ -109,7 +135,7 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
         </motion.div>
 
         {/* Dashboard Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-0.5">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-0.5">
           
           {/* Cool Fact Card */}
           <motion.div
@@ -117,26 +143,21 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-purple-500/10 via-background/50 to-background/50 border-purple-500/20 h-[280px] group hover:shadow-2xl transition-all duration-300 rounded-3xl">
+            <Card className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20 h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl">
               {/* Frosted overlay effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent pointer-events-none" />
               
-              <div className="relative p-8 h-full flex flex-col">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-full bg-purple-500/20">
-                    <Sparkles className="w-5 h-5 text-purple-400" />
+              <div className="relative p-8 h-full flex flex-col justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-background/20">
+                    <Sparkles className="w-5 h-5 text-background" />
                   </div>
-                  <h3 className="text-lg font-light text-purple-400">Did you know?</h3>
+                  <h3 className="text-lg font-light text-background">Did you know?</h3>
                 </div>
                 
-                <p className="text-2xl font-light leading-relaxed flex-1">
+                <p className="text-2xl font-light leading-relaxed text-background">
                   {randomFact}
                 </p>
-
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-4">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>Random knowledge</span>
-                </div>
               </div>
             </Card>
           </motion.div>
@@ -147,57 +168,34 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-blue-500/10 via-background/50 to-background/50 border-blue-500/20 h-[280px] group hover:shadow-2xl transition-all duration-300 rounded-3xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+            <Card className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20 h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent pointer-events-none" />
               
-              <div className="relative p-8 h-full flex flex-col">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-full bg-blue-500/20">
-                    <Clock className="w-5 h-5 text-blue-400" />
+              <div className="relative p-8 h-full flex flex-col justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-background/20">
+                    <Clock className="w-5 h-5 text-background" />
                   </div>
-                  <h3 className="text-lg font-light text-blue-400">Recent Activity</h3>
+                  <h3 className="text-lg font-light text-background">Recent Activity</h3>
                 </div>
                 
                 {recentItem ? (
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-2xl">{getTypeIcon(recentItem.item_type)}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {recentItem.item_type}
-                        </Badge>
-                      </div>
-                      <h4 className="text-xl font-light mb-2 line-clamp-2">
-                        {truncateTitle(recentItem.title, 60)}
-                      </h4>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        <ContentPreview content={recentItem.content} maxLength={100} />
-                      </p>
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="text-background">{getTypeIcon(recentItem.item_type)}</div>
+                      <Badge variant="secondary" className="text-xs bg-background/20 text-background border-background/30">
+                        {recentItem.item_type}
+                      </Badge>
                     </div>
-                    
-                    <div className="flex items-center justify-between mt-4">
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(recentItem.created_at).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </span>
-                      {recentItem.url && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs"
-                          onClick={() => window.open(recentItem.url, '_blank')}
-                        >
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          Open
-                        </Button>
-                      )}
-                    </div>
+                    <h4 className="text-xl font-light mb-2 line-clamp-2 text-background">
+                      {truncateTitle(recentItem.title, 60)}
+                    </h4>
+                    <p className="text-sm text-background/70 line-clamp-3">
+                      <ContentPreview content={recentItem.content} maxLength={150} />
+                    </p>
                   </div>
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                  <div className="text-background/60">
                     <p className="text-sm">No items yet</p>
                   </div>
                 )}
@@ -211,58 +209,35 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Card className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-cyan-500/10 via-background/50 to-background/50 border-cyan-500/20 h-[280px] group hover:shadow-2xl transition-all duration-300 rounded-3xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+            <Card className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20 h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent pointer-events-none" />
               
-              <div className="relative p-8 h-full flex flex-col">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-full bg-cyan-500/20">
-                    <Cloud className="w-5 h-5 text-cyan-400" />
+              <div className="relative p-8 h-full flex flex-col justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-full bg-background/20">
+                    <Cloud className="w-5 h-5 text-background" />
                   </div>
-                  <h3 className="text-lg font-light text-cyan-400">Local Weather</h3>
+                  <h3 className="text-lg font-light text-background">Local Weather</h3>
                 </div>
                 
                 {loadingWeather ? (
-                  <div className="flex-1 flex items-center justify-center">
-                    <div className="animate-pulse text-muted-foreground">Loading...</div>
+                  <div className="text-background/60">
+                    <div className="animate-pulse">Loading...</div>
                   </div>
                 ) : weather ? (
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-baseline gap-2 mb-4">
-                        <span className="text-5xl font-light">
-                          {weather.current_condition?.[0]?.temp_F}°
-                        </span>
-                        <span className="text-xl text-muted-foreground">F</span>
-                      </div>
-                      <p className="text-lg font-light mb-4">
-                        {weather.current_condition?.[0]?.weatherDesc?.[0]?.value}
-                      </p>
+                  <div>
+                    <div className="flex items-baseline gap-2 mb-4">
+                      <span className="text-5xl font-light text-background">
+                        {weather.current_condition?.[0]?.temp_F}°
+                      </span>
+                      <span className="text-xl text-background/70">F</span>
                     </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center gap-2">
-                        <Droplets className="w-4 h-4 text-cyan-400" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Humidity</p>
-                          <p className="text-sm font-light">
-                            {weather.current_condition?.[0]?.humidity}%
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Wind className="w-4 h-4 text-cyan-400" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Wind</p>
-                          <p className="text-sm font-light">
-                            {weather.current_condition?.[0]?.windspeedMiles} mph
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    <p className="text-lg font-light text-background">
+                      {weather.current_condition?.[0]?.weatherDesc?.[0]?.value}
+                    </p>
                   </div>
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                  <div className="text-background/60">
                     <p className="text-sm">Weather unavailable</p>
                   </div>
                 )}
@@ -270,144 +245,10 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
             </Card>
           </motion.div>
 
-          {/* Graph Preview Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Card className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-emerald-500/10 via-background/50 to-background/50 border-emerald-500/20 h-[280px] group hover:shadow-2xl transition-all duration-300 cursor-pointer rounded-3xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-              
-              <div className="relative p-8 h-full flex flex-col">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 rounded-full bg-emerald-500/20">
-                    <Network className="w-5 h-5 text-emerald-400" />
-                  </div>
-                  <h3 className="text-lg font-light text-emerald-400">Knowledge Graph</h3>
-                </div>
-                
-                <div className="flex-1 flex flex-col justify-between">
-                  {/* Graph visualization */}
-                  <div className="flex-1 flex items-center justify-center relative min-h-[120px]">
-                    {graphStats.totalNodes > 0 ? (
-                      <div className="relative w-full h-full">
-                        {/* Connection lines - render first so they appear behind nodes */}
-                        <svg className="absolute inset-0 w-full h-full">
-                          {[...Array(Math.min(graphStats.totalNodes, 12))].map((_, i) => {
-                            // Create connections between adjacent nodes
-                            const nextIndex = (i + 1) % Math.min(graphStats.totalNodes, 12)
-                            const x1 = 15 + (i % 4) * 23
-                            const y1 = 25 + Math.floor(i / 4) * 33
-                            const x2 = 15 + (nextIndex % 4) * 23
-                            const y2 = 25 + Math.floor(nextIndex / 4) * 33
-                            
-                            return (
-                              <motion.line
-                                key={`line-${i}`}
-                                x1={`${x1}%`}
-                                y1={`${y1}%`}
-                                x2={`${x2}%`}
-                                y2={`${y2}%`}
-                                stroke="currentColor"
-                                strokeWidth="1"
-                                className="text-emerald-400/30"
-                                initial={{ pathLength: 0, opacity: 0 }}
-                                animate={{ pathLength: 1, opacity: 1 }}
-                                transition={{
-                                  duration: 1,
-                                  delay: 0.4 + i * 0.05,
-                                  ease: "easeInOut"
-                                }}
-                              />
-                            )
-                          })}
-                        </svg>
-                        
-                        {/* Nodes */}
-                        {[...Array(Math.min(graphStats.totalNodes, 12))].map((_, i) => (
-                          <motion.div
-                            key={`node-${i}`}
-                            className="absolute rounded-full bg-emerald-400"
-                            style={{
-                              left: `${15 + (i % 4) * 23}%`,
-                              top: `${25 + Math.floor(i / 4) * 33}%`,
-                              width: '8px',
-                              height: '8px',
-                              transform: 'translate(-50%, -50%)',
-                            }}
-                            initial={{ scale: 0, opacity: 0 }}
-                            animate={{
-                              scale: [0, 1.2, 1],
-                              opacity: [0, 1, 0.8],
-                            }}
-                            transition={{
-                              duration: 0.6,
-                              delay: 0.4 + i * 0.05,
-                              ease: "easeOut"
-                            }}
-                          />
-                        ))}
-                        
-                        {/* Pulsing effect on random nodes */}
-                        {[...Array(Math.min(3, graphStats.totalNodes))].map((_, i) => {
-                          const nodeIndex = i * 4 // Select every 4th node
-                          return (
-                            <motion.div
-                              key={`pulse-${i}`}
-                              className="absolute rounded-full bg-emerald-400/20"
-                              style={{
-                                left: `${15 + (nodeIndex % 4) * 23}%`,
-                                top: `${25 + Math.floor(nodeIndex / 4) * 33}%`,
-                                width: '8px',
-                                height: '8px',
-                                transform: 'translate(-50%, -50%)',
-                              }}
-                              animate={{
-                                scale: [1, 2.5, 1],
-                                opacity: [0.5, 0, 0.5],
-                              }}
-                              transition={{
-                                duration: 2,
-                                delay: i * 0.7,
-                                repeat: Infinity,
-                                ease: "easeInOut"
-                              }}
-                            />
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-muted-foreground text-sm">
-                        No items yet
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4 mt-4">
-                    <div>
-                      <p className="text-2xl font-light">{graphStats.totalNodes}</p>
-                      <p className="text-xs text-muted-foreground">Nodes</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-light">{graphStats.connections}</p>
-                      <p className="text-xs text-muted-foreground">Links</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-light">{graphStats.clusters}</p>
-                      <p className="text-xs text-muted-foreground">Clusters</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-
         </div>
 
         {/* Feed Section */}
-        <div className="mt-8">
+        <div className="mt-16">
           {items.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -419,7 +260,7 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
               <p className="text-sm mt-2">Click "+ New" to add your first knowledge item</p>
             </motion.div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-12">
               {(() => {
                 // Group items by date
                 const itemsByDate = items.reduce((acc, item) => {
