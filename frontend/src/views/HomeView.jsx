@@ -155,6 +155,7 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
                     patternScale={2.5}
                     patternDensity={1.2}
                     speed={0.4}
+                    edgeFade={0}
                   />
                 </div>
               </div>
@@ -312,6 +313,7 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
                     patternScale={2.5}
                     patternDensity={1.2}
                     speed={0.4}
+                    edgeFade={0}
                   />
                 </div>
               </div>
