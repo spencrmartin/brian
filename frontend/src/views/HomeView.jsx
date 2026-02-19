@@ -22,10 +22,12 @@ import { truncateTitle } from '@/lib/utils'
 import ContentPreview from '@/components/ContentPreview'
 import { useKnowledge } from '@/hooks/useKnowledge'
 import { ItemDetailSheet } from '@/components/ItemDetailSheet'
+import { useSettings } from '@/contexts/SettingsContext'
 import PixelBlast from '@/components/PixelBlast'
 
 export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
   const { items, loadItems } = useKnowledge()
+  const { accentColor } = useSettings()
   const [weather, setWeather] = useState(null)
   const [loadingWeather, setLoadingWeather] = useState(true)
   const [detailItem, setDetailItem] = useState(null)
@@ -149,7 +151,7 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
                 <div className="absolute inset-0">
                   <PixelBlast
                     pixelSize={3}
-                    color={isDarkMode ? "#000000" : "#ffffff"}
+                    color={accentColor}
                     patternScale={2.5}
                     patternDensity={1.2}
                     speed={0.4}
@@ -306,7 +308,7 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
                 <div className="absolute inset-0">
                   <PixelBlast
                     pixelSize={3}
-                    color={isDarkMode ? "#000000" : "#ffffff"}
+                    color={accentColor}
                     patternScale={2.5}
                     patternDensity={1.2}
                     speed={0.4}
