@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useStore } from '../store/useStore'
+import { useSettings } from '../contexts/SettingsContext'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Badge } from './ui/badge'
@@ -145,6 +146,7 @@ export function ProjectSelector() {
     viewAllProjects,
   } = useStore()
 
+  const { accentColor } = useSettings()
   const [isOpen, setIsOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showArchived, setShowArchived] = useState(false)
@@ -377,17 +379,23 @@ export function ProjectSelector() {
             ${isOpen 
               ? 'bg-black/90 text-white border-white/20' 
               : viewAllProjects
-                ? 'bg-indigo-600/90 text-white border-indigo-400/30 hover:bg-indigo-700/90'
+                ? 'text-white hover:opacity-90'
                 : 'bg-card/90 text-foreground border-border hover:bg-muted/90'
             }
           `}
-          style={!viewAllProjects && currentProject?.color ? {
+          style={viewAllProjects ? {
+            backgroundColor: `${accentColor}e6`, // 90% opacity
+            borderColor: `${accentColor}4d`, // 30% opacity
+          } : !viewAllProjects && currentProject?.color ? {
             borderColor: `${currentProject.color}40`,
           } : {}}
         >
-          {/* Project Color Dot / Gradient for All */}
+          {/* Project Color Dot / Accent for All */}
           {viewAllProjects ? (
-            <div className="w-3 h-3 rounded-full bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400" />
+            <div 
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: accentColor }}
+            />
           ) : (
             <div 
               className="w-3 h-3 rounded-full"
@@ -410,7 +418,7 @@ export function ProjectSelector() {
           {/* Stats Badge */}
           <span className={`text-xs px-2 py-0.5 rounded-full ${
             viewAllProjects 
-              ? 'bg-white/20 text-indigo-100' 
+              ? 'bg-white/20 text-white' 
               : 'bg-muted text-muted-foreground'
           }`}>
             {viewAllProjects 
@@ -422,7 +430,7 @@ export function ProjectSelector() {
           {/* Chevron */}
           <ChevronRight className={`w-4 h-4 transition-transform duration-200 ${
             isOpen ? 'rotate-90' : ''
-          } ${viewAllProjects ? 'text-indigo-200' : 'text-muted-foreground'}`} />
+          } ${viewAllProjects ? 'text-white/80' : 'text-muted-foreground'}`} />
         </button>
         
         {/* Keyboard Shortcut Hint - only show when dropdown is closed */}
@@ -480,13 +488,17 @@ export function ProjectSelector() {
                   {projects.length > 1 && !searchQuery && (
                     <>
                       <button
-                        className={`w-full px-3 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left ${
-                          viewAllProjects ? 'bg-indigo-500/10' : ''
-                        }`}
+                        className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left"
+                        style={viewAllProjects ? {
+                          backgroundColor: `${accentColor}1a` // 10% opacity
+                        } : {}}
                         onClick={handleSelectAll}
                       >
-                        {/* Gradient Dot */}
-                        <div className="w-3 h-3 rounded-full flex-shrink-0 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500" />
+                        {/* Accent Color Dot */}
+                        <div 
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: accentColor }}
+                        />
                         
                         {/* Layers Icon */}
                         <span className="flex-shrink-0">
@@ -497,7 +509,15 @@ export function ProjectSelector() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-sm">All Projects</span>
-                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400">
+                            <Badge 
+                              variant="outline" 
+                              className="text-[10px] px-1.5 py-0"
+                              style={{
+                                backgroundColor: `${accentColor}1a`,
+                                borderColor: `${accentColor}4d`,
+                                color: accentColor
+                              }}
+                            >
                               Universe
                             </Badge>
                           </div>
@@ -510,7 +530,10 @@ export function ProjectSelector() {
                         
                         {/* Current Indicator */}
                         {viewAllProjects && (
-                          <Check className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                          <Check 
+                            className="w-4 h-4 flex-shrink-0"
+                            style={{ color: accentColor }}
+                          />
                         )}
                       </button>
                       <div className="mx-3 my-1 border-t border-border/50" />
