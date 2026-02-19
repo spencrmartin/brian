@@ -29,6 +29,25 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
   const [weather, setWeather] = useState(null)
   const [loadingWeather, setLoadingWeather] = useState(true)
   const [detailItem, setDetailItem] = useState(null)
+  const [isDarkMode, setIsDarkMode] = useState(false)
+  
+  useEffect(() => {
+    const checkDarkMode = () => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'))
+    }
+    
+    // Initial check
+    checkDarkMode()
+    
+    // Watch for changes
+    const observer = new MutationObserver(checkDarkMode)
+    observer.observe(document.documentElement, { 
+      attributes: true, 
+      attributeFilter: ['class'] 
+    })
+    
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     loadItems()
@@ -104,15 +123,21 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <div className="relative w-32 h-32 rounded-3xl overflow-hidden backdrop-blur-xl bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20 shadow-2xl">
+          <div className={`relative w-32 h-32 rounded-3xl overflow-hidden backdrop-blur-xl shadow-2xl ${
+            isDarkMode 
+              ? 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
+              : 'bg-gradient-to-br from-gray-100 via-gray-50 to-white border-gray-200'
+          }`}>
             {/* Frosted overlay effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent pointer-events-none z-10" />
+            <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none z-10 ${
+              isDarkMode ? 'from-black/10' : 'from-white/30'
+            } to-transparent`} />
             
             {/* PixelBlast Effect */}
             <div className="absolute inset-0">
               <PixelBlast
                 pixelSize={3}
-                color="#ffffff"
+                color={isDarkMode ? "#ffffff" : "#000000"}
                 patternScale={2.5}
                 patternDensity={1.2}
                 speed={0.4}
@@ -143,19 +168,25 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20 h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl">
+            <Card className={`relative overflow-hidden backdrop-blur-xl h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl ${
+              isDarkMode
+                ? 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
+                : 'bg-gradient-to-br from-gray-900/90 via-gray-900/80 to-gray-900/70 border-gray-900/20'
+            }`}>
               {/* Frosted overlay effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent pointer-events-none" />
+              <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none ${
+                isDarkMode ? 'from-black/10' : 'from-white/10'
+              } to-transparent`} />
               
               <div className="relative p-8 h-full flex flex-col justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-background/20">
-                    <Sparkles className="w-5 h-5 text-background" />
+                  <div className={`p-2 rounded-full ${isDarkMode ? 'bg-background/20' : 'bg-white/20'}`}>
+                    <Sparkles className={`w-5 h-5 ${isDarkMode ? 'text-background' : 'text-white'}`} />
                   </div>
-                  <h3 className="text-lg font-light text-background">Did you know?</h3>
+                  <h3 className={`text-lg font-light ${isDarkMode ? 'text-background' : 'text-white'}`}>Did you know?</h3>
                 </div>
                 
-                <p className="text-2xl font-light leading-relaxed text-background">
+                <p className={`text-2xl font-light leading-relaxed ${isDarkMode ? 'text-background' : 'text-white'}`}>
                   {randomFact}
                 </p>
               </div>
@@ -168,34 +199,44 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20 h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent pointer-events-none" />
+            <Card className={`relative overflow-hidden backdrop-blur-xl h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl ${
+              isDarkMode
+                ? 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
+                : 'bg-gradient-to-br from-gray-900/90 via-gray-900/80 to-gray-900/70 border-gray-900/20'
+            }`}>
+              <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none ${
+                isDarkMode ? 'from-black/10' : 'from-white/10'
+              } to-transparent`} />
               
               <div className="relative p-8 h-full flex flex-col justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-background/20">
-                    <Clock className="w-5 h-5 text-background" />
+                  <div className={`p-2 rounded-full ${isDarkMode ? 'bg-background/20' : 'bg-white/20'}`}>
+                    <Clock className={`w-5 h-5 ${isDarkMode ? 'text-background' : 'text-white'}`} />
                   </div>
-                  <h3 className="text-lg font-light text-background">Recent Activity</h3>
+                  <h3 className={`text-lg font-light ${isDarkMode ? 'text-background' : 'text-white'}`}>Recent Activity</h3>
                 </div>
                 
                 {recentItem ? (
                   <div>
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="text-background">{getTypeIcon(recentItem.item_type)}</div>
-                      <Badge variant="secondary" className="text-xs bg-background/20 text-background border-background/30">
+                      <div className={isDarkMode ? 'text-background' : 'text-white'}>{getTypeIcon(recentItem.item_type)}</div>
+                      <Badge variant="secondary" className={`text-xs ${
+                        isDarkMode 
+                          ? 'bg-background/20 text-background border-background/30'
+                          : 'bg-white/20 text-white border-white/30'
+                      }`}>
                         {recentItem.item_type}
                       </Badge>
                     </div>
-                    <h4 className="text-xl font-light mb-2 line-clamp-2 text-background">
+                    <h4 className={`text-xl font-light mb-2 line-clamp-2 ${isDarkMode ? 'text-background' : 'text-white'}`}>
                       {truncateTitle(recentItem.title, 60)}
                     </h4>
-                    <p className="text-sm text-background/70 line-clamp-3">
+                    <p className={`text-sm line-clamp-3 ${isDarkMode ? 'text-background/70' : 'text-white/70'}`}>
                       <ContentPreview content={recentItem.content} maxLength={150} />
                     </p>
                   </div>
                 ) : (
-                  <div className="text-background/60">
+                  <div className={isDarkMode ? 'text-background/60' : 'text-white/60'}>
                     <p className="text-sm">No items yet</p>
                   </div>
                 )}
@@ -209,35 +250,41 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Card className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20 h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-black/10 to-transparent pointer-events-none" />
+            <Card className={`relative overflow-hidden backdrop-blur-xl h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl ${
+              isDarkMode
+                ? 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
+                : 'bg-gradient-to-br from-gray-900/90 via-gray-900/80 to-gray-900/70 border-gray-900/20'
+            }`}>
+              <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none ${
+                isDarkMode ? 'from-black/10' : 'from-white/10'
+              } to-transparent`} />
               
               <div className="relative p-8 h-full flex flex-col justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-background/20">
-                    <Cloud className="w-5 h-5 text-background" />
+                  <div className={`p-2 rounded-full ${isDarkMode ? 'bg-background/20' : 'bg-white/20'}`}>
+                    <Cloud className={`w-5 h-5 ${isDarkMode ? 'text-background' : 'text-white'}`} />
                   </div>
-                  <h3 className="text-lg font-light text-background">Local Weather</h3>
+                  <h3 className={`text-lg font-light ${isDarkMode ? 'text-background' : 'text-white'}`}>Local Weather</h3>
                 </div>
                 
                 {loadingWeather ? (
-                  <div className="text-background/60">
+                  <div className={isDarkMode ? 'text-background/60' : 'text-white/60'}>
                     <div className="animate-pulse">Loading...</div>
                   </div>
                 ) : weather ? (
                   <div>
                     <div className="flex items-baseline gap-2 mb-4">
-                      <span className="text-5xl font-light text-background">
+                      <span className={`text-5xl font-light ${isDarkMode ? 'text-background' : 'text-white'}`}>
                         {weather.current_condition?.[0]?.temp_F}°
                       </span>
-                      <span className="text-xl text-background/70">F</span>
+                      <span className={`text-xl ${isDarkMode ? 'text-background/70' : 'text-white/70'}`}>F</span>
                     </div>
-                    <p className="text-lg font-light text-background">
+                    <p className={`text-lg font-light ${isDarkMode ? 'text-background' : 'text-white'}`}>
                       {weather.current_condition?.[0]?.weatherDesc?.[0]?.value}
                     </p>
                   </div>
                 ) : (
-                  <div className="text-background/60">
+                  <div className={isDarkMode ? 'text-background/60' : 'text-white/60'}>
                     <p className="text-sm">Weather unavailable</p>
                   </div>
                 )}
