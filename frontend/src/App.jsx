@@ -12,11 +12,8 @@ import { BrainLogo } from '@/components/BrainLogo'
 import { ProjectSelector } from '@/components/ProjectSelector'
 import { ProjectPill } from '@/components/ProjectPill'
 import { SimilarityGraph } from '@/components/SimilarityGraph'
-import { InfinitePinboard } from '@/components/InfinitePinboard'
-import { Timeline } from '@/components/Timeline'
 import { Settings } from '@/components/Settings'
-import LinkPreview from '@/components/LinkPreview'
-import Antigravity from '@/components/animations/Antigravity'
+import HomeView from '@/views/HomeView'
 import { ItemDetailSheet } from '@/components/ItemDetailSheet'
 import {
   Dialog,
@@ -40,7 +37,8 @@ import {
   Network,
   Layers,
   Search,
-  LayoutGrid
+  LayoutGrid,
+  Home
 } from 'lucide-react'
 import './App.css'
 
@@ -82,7 +80,7 @@ function App() {
   }, [])
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedView, setSelectedView] = useState('feed')
+  const [selectedView, setSelectedView] = useState('home')
   const [newDialogOpen, setNewDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -176,49 +174,21 @@ function App() {
 
       {/* Top Left Navigation - Icon Buttons */}
       <div className="fixed top-6 left-6 z-50 flex flex-col gap-2">
-        {/* Brain Logo Button */}
-        <div className="group relative">
-          <Button 
-            size="icon"
-            className="h-12 w-12 rounded-full shadow-lg bg-black hover:bg-gray-800"
-          >
-            <BrainLogo className="w-6 h-6 text-white" />
-          </Button>
-        </div>
-
-        {/* Feed Button */}
+        {/* Home Button */}
         <div className="group relative">
           <Button 
             size="icon"
             className={`h-12 w-12 rounded-full shadow-lg transition-colors ${
-              selectedView === 'feed' 
+              selectedView === 'home' 
                 ? 'bg-black hover:bg-gray-800 text-white' 
                 : 'bg-card hover:bg-muted text-foreground'
             }`}
-            onClick={() => setSelectedView('feed')}
+            onClick={() => setSelectedView('home')}
           >
-            <Layers className="w-5 h-5" />
+            <Home className="w-5 h-5" />
           </Button>
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-light">
-            Feed
-          </div>
-        </div>
-
-        {/* Timeline Button */}
-        <div className="group relative">
-          <Button 
-            size="icon"
-            className={`h-12 w-12 rounded-full shadow-lg transition-colors ${
-              selectedView === 'timeline' 
-                ? 'bg-black hover:bg-gray-800 text-white' 
-                : 'bg-card hover:bg-muted text-foreground'
-            }`}
-            onClick={() => setSelectedView('timeline')}
-          >
-            <Calendar className="w-5 h-5" />
-          </Button>
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap font-light">
-            Timeline
+            Home
           </div>
         </div>
 
@@ -431,6 +401,15 @@ function App() {
               </Button>
             </div>
           </div>
+        )}
+
+        {/* Home View - Dashboard with Frosted Cards */}
+        {!loading && !error && selectedView === 'home' && (
+          <HomeView 
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onToggleFavorite={toggleFavorite}
+          />
         )}
 
         {/* Feed View - Grid of Tiles */}

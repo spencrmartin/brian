@@ -6,6 +6,7 @@ export function SettingsProvider({ children }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('brian-theme') || 'system')
   const [accentColor, setAccentColor] = useState(() => localStorage.getItem('brian-accent') || '#3b82f6')
   const [cardDensity, setCardDensity] = useState(() => localStorage.getItem('brian-density') || 'comfortable')
+  const [temperatureUnit, setTemperatureUnit] = useState(() => localStorage.getItem('brian-temp-unit') || 'F')
 
   // Apply theme
   useEffect(() => {
@@ -64,6 +65,11 @@ export function SettingsProvider({ children }) {
     localStorage.setItem('brian-density', cardDensity)
   }, [cardDensity])
 
+  // Save temperature unit
+  useEffect(() => {
+    localStorage.setItem('brian-temp-unit', temperatureUnit)
+  }, [temperatureUnit])
+
   // Get card density classes
   const getCardDensityClasses = () => {
     switch (cardDensity) {
@@ -106,6 +112,8 @@ export function SettingsProvider({ children }) {
     cardDensity,
     setCardDensity,
     getCardDensityClasses,
+    temperatureUnit,
+    setTemperatureUnit,
   }
 
   return (
