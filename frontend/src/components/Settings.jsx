@@ -31,7 +31,9 @@ export function Settings({ items = [], onImport }) {
     accentColor, 
     setAccentColor, 
     cardDensity, 
-    setCardDensity 
+    setCardDensity,
+    temperatureUnit,
+    setTemperatureUnit
   } = useSettings()
   
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
@@ -205,6 +207,27 @@ export function Settings({ items = [], onImport }) {
                   onClick={() => setCardDensity('spacious')}
                 >
                   Spacious
+                </Button>
+              </div>
+            </div>
+
+            {/* Temperature Unit */}
+            <div>
+              <label className="text-sm font-medium mb-3 block">Temperature Unit</label>
+              <div className="flex gap-2">
+                <Button
+                  variant={temperatureUnit === 'F' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTemperatureUnit('F')}
+                >
+                  Fahrenheit (°F)
+                </Button>
+                <Button
+                  variant={temperatureUnit === 'C' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setTemperatureUnit('C')}
+                >
+                  Celsius (°C)
                 </Button>
               </div>
             </div>

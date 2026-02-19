@@ -27,7 +27,7 @@ import PixelBlast from '@/components/PixelBlast'
 
 export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
   const { items, loadItems } = useKnowledge()
-  const { accentColor } = useSettings()
+  const { accentColor, temperatureUnit } = useSettings()
   const [weather, setWeather] = useState(null)
   const [loadingWeather, setLoadingWeather] = useState(true)
   const [detailItem, setDetailItem] = useState(null)
@@ -277,9 +277,13 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
                     <div>
                       <div className="flex items-baseline gap-2 mb-4">
                         <span className={`text-5xl font-light ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>
-                          {weather.current_condition?.[0]?.temp_F}°
+                          {temperatureUnit === 'C' 
+                            ? weather.current_condition?.[0]?.temp_C 
+                            : weather.current_condition?.[0]?.temp_F}°
                         </span>
-                        <span className={`text-xl ${isDarkMode ? 'text-gray-700' : 'text-background/70'}`}>F</span>
+                        <span className={`text-xl ${isDarkMode ? 'text-gray-700' : 'text-background/70'}`}>
+                          {temperatureUnit}
+                        </span>
                       </div>
                       <p className={`text-lg font-light ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>
                         {weather.current_condition?.[0]?.weatherDesc?.[0]?.value}
