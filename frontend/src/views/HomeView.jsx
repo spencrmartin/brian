@@ -241,53 +241,80 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
             </Card>
           </motion.div>
 
-          {/* Weather Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Card className={`relative overflow-hidden backdrop-blur-xl h-[560px] group hover:shadow-2xl transition-all duration-300 rounded-3xl ${
-              isDarkMode
-                ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
-                : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
-            }`}>
-              <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none ${
-                isDarkMode ? 'from-white/20' : 'from-black/10'
-              } to-transparent`} />
-              
-              <div className="relative p-8 h-full flex flex-col justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-800/20' : 'bg-background/20'}`}>
-                    <Cloud className={`w-5 h-5 ${isDarkMode ? 'text-gray-800' : 'text-background'}`} />
-                  </div>
-                  <h3 className={`text-lg font-light ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>Local Weather</h3>
-                </div>
+          {/* Right Column - Weather + PixelBlast */}
+          <div className="flex flex-col gap-0.5">
+            {/* Weather Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className={`relative overflow-hidden backdrop-blur-xl h-[428px] group hover:shadow-2xl transition-all duration-300 rounded-3xl ${
+                isDarkMode
+                  ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
+                  : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
+              }`}>
+                <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none ${
+                  isDarkMode ? 'from-white/20' : 'from-black/10'
+                } to-transparent`} />
                 
-                {loadingWeather ? (
-                  <div className={isDarkMode ? 'text-gray-600' : 'text-background/60'}>
-                    <div className="animate-pulse">Loading...</div>
-                  </div>
-                ) : weather ? (
-                  <div>
-                    <div className="flex items-baseline gap-2 mb-4">
-                      <span className={`text-5xl font-light ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>
-                        {weather.current_condition?.[0]?.temp_F}°
-                      </span>
-                      <span className={`text-xl ${isDarkMode ? 'text-gray-700' : 'text-background/70'}`}>F</span>
+                <div className="relative p-8 h-full flex flex-col justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-800/20' : 'bg-background/20'}`}>
+                      <Cloud className={`w-5 h-5 ${isDarkMode ? 'text-gray-800' : 'text-background'}`} />
                     </div>
-                    <p className={`text-lg font-light ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>
-                      {weather.current_condition?.[0]?.weatherDesc?.[0]?.value}
-                    </p>
+                    <h3 className={`text-lg font-light ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>Local Weather</h3>
                   </div>
-                ) : (
-                  <div className={isDarkMode ? 'text-gray-600' : 'text-background/60'}>
-                    <p className="text-sm">Weather unavailable</p>
-                  </div>
-                )}
+                  
+                  {loadingWeather ? (
+                    <div className={isDarkMode ? 'text-gray-600' : 'text-background/60'}>
+                      <div className="animate-pulse">Loading...</div>
+                    </div>
+                  ) : weather ? (
+                    <div>
+                      <div className="flex items-baseline gap-2 mb-4">
+                        <span className={`text-5xl font-light ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>
+                          {weather.current_condition?.[0]?.temp_F}°
+                        </span>
+                        <span className={`text-xl ${isDarkMode ? 'text-gray-700' : 'text-background/70'}`}>F</span>
+                      </div>
+                      <p className={`text-lg font-light ${isDarkMode ? 'text-gray-800' : 'text-background'}`}>
+                        {weather.current_condition?.[0]?.weatherDesc?.[0]?.value}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className={isDarkMode ? 'text-gray-600' : 'text-background/60'}>
+                      <p className="text-sm">Weather unavailable</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* PixelBlast Container */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <div className={`relative h-32 rounded-3xl overflow-hidden backdrop-blur-xl shadow-2xl ${
+                isDarkMode
+                  ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
+                  : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
+              }`}>
+                {/* PixelBlast Effect */}
+                <div className="absolute inset-0">
+                  <PixelBlast
+                    pixelSize={3}
+                    color={isDarkMode ? "#000000" : "#ffffff"}
+                    patternScale={2.5}
+                    patternDensity={1.2}
+                    speed={0.4}
+                  />
+                </div>
               </div>
-            </Card>
-          </motion.div>
+            </motion.div>
+          </div>
 
         </div>
 
