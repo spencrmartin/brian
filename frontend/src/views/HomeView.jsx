@@ -145,11 +145,6 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
                   ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
                   : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
               }`}>
-                {/* Frosted overlay effect */}
-                <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none z-10 ${
-                  isDarkMode ? 'from-white/20' : 'from-black/10'
-                } to-transparent`} />
-                
                 {/* PixelBlast Effect */}
                 <div className="absolute inset-0">
                   <PixelBlast
