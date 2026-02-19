@@ -1,9 +1,10 @@
 # 🧠 Brian - Your Personal Knowledge Base
 
 > A play on "brain" - Brian is your intelligent knowledge repository with vector-based similarity search, beautiful graph visualization, and seamless Goose integration. Because I cannot spell 9/10 times and I make this mistake all the time now you can too!
-<img width="1628" height="905" alt="Screenshot 2026-02-04 at 12 35 14 PM" src="https://github.com/user-attachments/assets/d6d412a5-df62-4c93-a48c-b276c6fc1e04" />
+<img width="1528" height="1109" alt="Screenshot 2026-02-19 at 3 35 51 PM" src="https://github.com/user-attachments/assets/5c849425-6c69-4d44-bd11-e19d828272f5" />
 
-<img width="1619" height="901" alt="Screenshot 2026-02-04 at 12 35 48 PM" src="https://github.com/user-attachments/assets/6b343f5d-95ca-4216-97cc-38539a25757d" />
+<img width="1527" height="1110" alt="Screenshot 2026-02-19 at 3 36 05 PM" src="https://github.com/user-attachments/assets/6de1efb2-5059-49e7-81a9-6b1999f6f147" />
+
 
 
 ## ✨ Features
