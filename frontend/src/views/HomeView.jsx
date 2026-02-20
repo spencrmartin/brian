@@ -125,9 +125,13 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
           transition={{ delay: 0.2 }}
           className="mb-12 md:mb-16"
         >
-          <h1 className="text-5xl font-light mb-2">Welcome back</h1>
+          <h1 className="text-5xl font-light mb-2">
+            {items.length <= 1 ? 'Welcome' : 'Welcome back'}
+          </h1>
           <p className="text-muted-foreground text-lg font-light">
-            Your knowledge universe at a glance
+            {items.length === 0
+              ? 'Start building your knowledge universe'
+              : 'Your knowledge universe at a glance'}
           </p>
         </motion.div>
 
