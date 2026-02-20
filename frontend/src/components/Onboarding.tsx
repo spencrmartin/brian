@@ -63,15 +63,15 @@ function LoginStep({ onNext }: { onNext: (name: string) => void }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col items-start gap-10 w-full max-w-sm"
+      className="flex flex-col items-start w-full max-w-md px-12"
     >
       <BrianLogo size={22} gap={3} />
 
-      <p className="text-sm text-muted-foreground font-light tracking-wide">
+      <p className="text-sm text-muted-foreground font-light tracking-wide mt-16">
         Keep your knowledge local
       </p>
 
-      <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="w-full mt-8 flex flex-col gap-6">
         <input
           type="text"
           placeholder="Your name"
@@ -101,23 +101,21 @@ function WelcomeStep({ name, onNext }: { name: string; onNext: () => void }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="flex flex-col items-start gap-10 w-full max-w-sm"
+      className="flex flex-col items-start w-full max-w-md px-12"
     >
       <BrianLogo size={20} gap={3} />
 
-      <div className="flex flex-col gap-3">
-        <h1 className="text-3xl font-light text-foreground">
-          Hey {name}, this is Brian
-        </h1>
-        <p className="text-base text-muted-foreground font-light leading-relaxed">
-          Your personal knowledge base. Save notes, links, code snippets, and
-          papers — then search and connect them with AI.
-        </p>
-      </div>
+      <h1 className="text-3xl font-light text-foreground mt-16">
+        Hey {name}, this is Brian
+      </h1>
+      <p className="text-base text-muted-foreground font-light leading-relaxed mt-4">
+        Your personal knowledge base. Save notes, links, code snippets, and
+        papers — then search and connect them with AI.
+      </p>
 
       <button
         onClick={onNext}
-        className="self-end px-8 py-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring"
+        className="self-end mt-10 px-8 py-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring"
       >
         Get Started
       </button>
