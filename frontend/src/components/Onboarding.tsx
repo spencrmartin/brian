@@ -9,13 +9,20 @@ export function getUserName(): string | null {
   return localStorage.getItem(USER_NAME_KEY);
 }
 
-// ── Brian Logo (static, colored squares from loading.svg) ───────────────────
+// ── Brian Logo (animated colored squares from loading.svg) ──────────────────
 
-function BrianLogo({ size = 14, gap = 2 }: { size?: number; gap?: number }) {
+function BrianLogo({ size = 14, gap = 2, animated = false }: { size?: number; gap?: number; animated?: boolean }) {
   const grid = [
     ['#FF8000', '#D5FF00', '#FF2F00', '#00E1FF', '#8A38F5'],
     ['#00E1FF', '#8A38F5', '#FF8000', '#D5FF00', '#FF2F00'],
     ['#FF8000', '#FF2F00', '#D5FF00', '#00E1FF', '#8A38F5'],
+  ];
+
+  // Staggered order for organic load-in feel
+  const delays = [
+    [0.56, 0.3, 1.05, 0.0, 0.83],
+    [0.9, 0.65, 0.0, 1.15, 0.4],
+    [0.2, 1.25, 0.95, 0.48, 0.72],
   ];
 
   return (
@@ -27,19 +34,49 @@ function BrianLogo({ size = 14, gap = 2 }: { size?: number; gap?: number }) {
       }}
     >
       {grid.map((row, r) =>
-        row.map((color, c) => (
-          <div
-            key={`${r}-${c}`}
-            className="absolute rounded-[1.5px]"
-            style={{
-              width: size,
-              height: size,
-              left: c * (size + gap),
-              top: r * (size + gap),
-              backgroundColor: color,
-            }}
-          />
-        ))
+        row.map((color, c) => {
+          if (animated) {
+            return (
+              <motion.div
+                key={`${r}-${c}`}
+                className="absolute rounded-[1.5px]"
+                style={{
+                  width: size,
+                  height: size,
+                  left: c * (size + gap),
+                  top: r * (size + gap),
+                  backgroundColor: color,
+                }}
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{
+                  opacity: [0, 0.95, 0.5, 0.9, 0.55],
+                  scale: [0.5, 1, 1, 1, 1],
+                }}
+                transition={{
+                  delay: delays[r][c],
+                  duration: 3,
+                  repeat: Infinity,
+                  repeatDelay: 0.5,
+                  ease: 'easeInOut',
+                  times: [0, 0.2, 0.5, 0.75, 1],
+                }}
+              />
+            );
+          }
+          return (
+            <div
+              key={`${r}-${c}`}
+              className="absolute rounded-[1.5px]"
+              style={{
+                width: size,
+                height: size,
+                left: c * (size + gap),
+                top: r * (size + gap),
+                backgroundColor: color,
+              }}
+            />
+          );
+        })
       )}
     </div>
   );
@@ -65,7 +102,7 @@ function LoginStep({ onNext }: { onNext: (name: string) => void }) {
       transition={{ duration: 0.5 }}
       className="flex flex-col items-start w-full max-w-md px-12"
     >
-      <BrianLogo size={22} gap={3} />
+      <BrianLogo size={22} gap={3} animated />
 
       <h1 className="text-2xl font-light text-foreground mt-10">brian</h1>
 
