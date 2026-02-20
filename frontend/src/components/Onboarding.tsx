@@ -104,8 +104,10 @@ function LoginStep({ onNext, accentColor }: { onNext: (name: string) => void; ac
       transition={{ duration: 0.5 }}
       className="flex flex-col items-start w-full max-w-md px-12"
     >
-      <div className="relative w-24 h-16 rounded-2xl overflow-hidden">
-        <PixelBlast pixelSize={3} color={accentColor} patternScale={2.5} patternDensity={1.2} speed={0.4} edgeFade={0} />
+      <div className="relative w-24 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 dark:from-gray-200 dark:via-gray-100 dark:to-white">
+        <div className="absolute inset-0">
+          <PixelBlast pixelSize={3} color={accentColor} patternScale={2.5} patternDensity={1.2} speed={0.4} edgeFade={0} />
+        </div>
       </div>
 
       <h1 className="text-2xl font-light text-foreground mt-10">brian</h1>
@@ -146,8 +148,10 @@ function WelcomeStep({ name, onNext, accentColor }: { name: string; onNext: () =
       exit={{ opacity: 0, y: -20 }}
       className="flex flex-col items-start w-full max-w-md px-12"
     >
-      <div className="relative w-24 h-16 rounded-2xl overflow-hidden">
-        <PixelBlast pixelSize={3} color={accentColor} patternScale={2.5} patternDensity={1.2} speed={0.4} edgeFade={0} />
+      <div className="relative w-24 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 dark:from-gray-200 dark:via-gray-100 dark:to-white">
+        <div className="absolute inset-0">
+          <PixelBlast pixelSize={3} color={accentColor} patternScale={2.5} patternDensity={1.2} speed={0.4} edgeFade={0} />
+        </div>
       </div>
 
       <h1 className="text-3xl font-light text-foreground mt-16">
