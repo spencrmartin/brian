@@ -136,6 +136,22 @@ function ConnectToolsStep({
 }) {
   const [connecting, setConnecting] = useState<string | null>(null);
   const [connected, setConnected] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Check which tools are already connected on mount
+  useState(() => {
+    fetch(`${getApiBaseUrl()}/tools/status`)
+      .then((res) => res.json())
+      .then((status: Record<string, boolean>) => {
+        const alreadyConnected = Object.entries(status)
+          .filter(([, v]) => v)
+          .map(([k]) => k);
+        if (alreadyConnected.length > 0) {
+          setConnected(alreadyConnected);
+        }
+      })
+      .catch(() => {});
+  });
 
   const tools = [
     {
@@ -168,6 +184,7 @@ function ConnectToolsStep({
 
   const handleConnect = async (toolId: string) => {
     setConnecting(toolId);
+    setError(null);
     try {
       const res = await fetch(`${getApiBaseUrl()}/tools/connect`, {
         method: 'POST',
@@ -176,9 +193,12 @@ function ConnectToolsStep({
       });
       if (res.ok) {
         setConnected((prev) => [...prev, toolId]);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.detail || 'Connection failed');
       }
     } catch {
-      setConnected((prev) => [...prev, toolId]);
+      setError('Could not reach backend');
     } finally {
       setConnecting(null);
     }
