@@ -1218,3 +1218,62 @@ async def update_project_access(project_id: str):
     # Return updated project
     updated = project_repo.get_by_id(project_id)
     return updated.to_dict()
+
+
+# ── Database Management Endpoints ────────────────────────────────────────────
+
+@router.get("/database/info")
+async def get_database_info():
+    """Get database info including schema version, path, and size"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    from pathlib import Path
+    db_file = Path(db.db_path)
+    size_mb = round(db_file.stat().st_size / (1024 * 1024), 2) if db_file.exists() else 0
+    
+    return {
+        "path": db.db_path,
+        "size_mb": size_mb,
+        "schema_version": db.get_schema_version(),
+    }
+
+
+@router.get("/database/backups")
+async def list_backups():
+    """List all database backups"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    backups = db.list_backups()
+    return {"count": len(backups), "backups": backups}
+
+
+@router.post("/database/backups")
+async def create_backup():
+    """Create a manual database backup"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    backup_path = db.backup(reason="manual")
+    if backup_path is None:
+        raise HTTPException(status_code=500, detail="Backup failed")
+    
+    return {"path": backup_path, "message": "Backup created successfully"}
+
+
+@router.post("/database/restore")
+async def restore_backup(data: dict):
+    """Restore database from a backup file. Requires {"path": "..."}"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    backup_path = data.get("path")
+    if not backup_path:
+        raise HTTPException(status_code=400, detail="Missing 'path' field")
+    
+    success = db.restore(backup_path)
+    if not success:
+        raise HTTPException(status_code=500, detail="Restore failed")
+    
+    return {"message": "Database restored successfully", "schema_version": db.get_schema_version()}

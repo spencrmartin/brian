@@ -60,7 +60,17 @@ def create_app() -> FastAPI:
     @app.get("/health")
     async def health():
         """Health check endpoint"""
-        return {"status": "healthy", "app": Config.APP_NAME, "version": Config.APP_VERSION}
+        schema_version = None
+        try:
+            schema_version = db.get_schema_version()
+        except Exception:
+            pass
+        return {
+            "status": "healthy",
+            "app": Config.APP_NAME,
+            "version": Config.APP_VERSION,
+            "schema_version": schema_version,
+        }
     
     return app
 
