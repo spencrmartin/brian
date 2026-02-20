@@ -73,7 +73,7 @@ function LoginStep({ onNext }: { onNext: (name: string) => void }) {
         Keep your knowledge local
       </p>
 
-      <form onSubmit={handleSubmit} className="w-full mt-10 flex flex-col gap-4 items-start">
+      <form onSubmit={handleSubmit} className="w-full mt-5 flex flex-col gap-4 items-start">
         <input
           type="text"
           placeholder="Your name"
