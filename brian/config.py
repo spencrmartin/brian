@@ -5,12 +5,29 @@ Priority order (highest wins):
   1. Environment variables (BRIAN_PORT, BRIAN_HOST, etc.)
   2. Config file (~/.brian/config.json)
   3. Built-in defaults
+
+Version is read from pyproject.toml (single source of truth).
 """
 import json
 import os
+import re
 import socket
 from pathlib import Path
 from typing import Optional
+
+
+def _read_version() -> str:
+    """Read version from pyproject.toml. Falls back to hardcoded if not found."""
+    try:
+        pyproject = Path(__file__).parent.parent / "pyproject.toml"
+        if pyproject.exists():
+            text = pyproject.read_text()
+            match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.MULTILINE)
+            if match:
+                return match.group(1)
+    except Exception:
+        pass
+    return "0.1.0"  # fallback for PyInstaller builds where pyproject.toml isn't available
 
 
 # ── Defaults ─────────────────────────────────────────────────────────────────
@@ -154,7 +171,7 @@ class Config:
         
         # Application metadata
         self.APP_NAME = "brian"
-        self.APP_VERSION = "0.1.0"
+        self.APP_VERSION = _read_version()
         self.APP_DESCRIPTION = "Your personal knowledge base - a play on brain"
         
         # CORS (for desktop app)
