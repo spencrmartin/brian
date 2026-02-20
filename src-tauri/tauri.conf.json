@@ -40,7 +40,8 @@
       "binaries/brian-backend"
     ],
     "macOS": {
-      "minimumSystemVersion": "10.15"
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": "Developer ID Application: SPENCER ERNEST F MARTIN (8HGTQKQUPP)"
     }
   }
 }

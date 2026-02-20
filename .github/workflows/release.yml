@@ -4,6 +4,8 @@
 # Tauri desktop app for macOS (arm64 + x86_64), Windows, and Linux,
 # then uploads all artifacts to a GitHub Release.
 #
+# macOS builds are signed + notarized with Apple Developer ID.
+#
 # Usage:
 #   ./scripts/version.sh bump patch
 #   git add -A && git commit -m "chore: bump version to v0.1.1"
@@ -115,6 +117,44 @@ jobs:
             libssl-dev \
             libgtk-3-dev
 
+      # ── macOS: Import signing certificate ──────────────────────────────────
+      - name: Import Apple signing certificate
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          # Decode the certificate
+          echo "$APPLE_CERTIFICATE" | base64 --decode > /tmp/certificate.p12
+
+          # Create a temporary keychain
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 16)
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import the certificate
+          security import /tmp/certificate.p12 \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+
+          # Allow codesign to access the keychain
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Add to search list
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          # Verify
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          # Clean up
+          rm /tmp/certificate.p12
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -156,7 +196,19 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2"
 
-      - name: Build Tauri app
+      # ── Build Tauri app (with signing on macOS) ────────────────────────────
+      - name: Build Tauri app (macOS — signed + notarized)
+        if: runner.os == 'macOS'
+        working-directory: src-tauri
+        env:
+          APPLE_SIGNING_IDENTITY: "Developer ID Application: SPENCER ERNEST F MARTIN (8HGTQKQUPP)"
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: cargo tauri build ${{ matrix.args }}
+
+      - name: Build Tauri app (Linux/Windows)
+        if: runner.os != 'macOS'
         working-directory: src-tauri
         run: cargo tauri build ${{ matrix.args }}
 
