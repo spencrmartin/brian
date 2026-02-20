@@ -63,7 +63,7 @@ function LoginStep({ onNext }: { onNext: (name: string) => void }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.5 }}
-      className="flex flex-col items-center gap-10 max-w-sm text-center"
+      className="flex flex-col items-start gap-10 w-full max-w-sm"
     >
       <BrianLogo size={22} gap={3} />
 
@@ -78,13 +78,13 @@ function LoginStep({ onNext }: { onNext: (name: string) => void }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoFocus
-          className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/8 text-white/90 text-sm text-center placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
+          className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/8 text-white/90 text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
         />
 
         <button
           type="submit"
           disabled={!name.trim()}
-          className="w-full px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-white/20 disabled:opacity-20 disabled:cursor-not-allowed"
+          className="self-end px-8 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-white/20 disabled:opacity-20 disabled:cursor-not-allowed"
         >
           Log in
         </button>
@@ -101,7 +101,7 @@ function WelcomeStep({ name, onNext }: { name: string; onNext: () => void }) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="flex flex-col items-center gap-10 max-w-md text-center"
+      className="flex flex-col items-start gap-10 w-full max-w-sm"
     >
       <BrianLogo size={20} gap={3} />
 
@@ -117,7 +117,7 @@ function WelcomeStep({ name, onNext }: { name: string; onNext: () => void }) {
 
       <button
         onClick={onNext}
-        className="px-8 py-3 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-white/20"
+        className="self-end px-8 py-3 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-white/20"
       >
         Get Started
       </button>
