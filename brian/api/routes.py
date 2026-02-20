@@ -1283,21 +1283,84 @@ async def restore_backup(data: dict):
 
 # ── Tool Connection Endpoints ────────────────────────────────────────────────
 
-@router.post("/tools/connect")
-async def connect_tool(data: dict):
-    """Connect Brian as an MCP server to an AI tool by writing its config file."""
-    import json
+
+def _find_sidecar_binary() -> Optional[str]:
+    """
+    Locate the brian-backend sidecar binary.
+    
+    In a signed Tauri .app bundle the layout is:
+        Brian.app/Contents/Resources/binaries/brian-backend-<target-triple>
+    
+    The running process (PyInstaller onefile) unpacks to a temp dir, but the
+    *original* binary lives next to the Tauri resources.  We can find it by
+    walking up from sys.executable (the unpacked temp) or by checking the
+    well-known .app bundle path.
+    
+    Returns the absolute path to the sidecar binary, or None if not found.
+    """
+    import platform
+    import sys
+    from pathlib import Path
+    
+    # Determine the target triple suffix Tauri uses
+    machine = platform.machine().lower()
+    arch = "aarch64" if machine in ("arm64", "aarch64") else "x86_64"
+    triple = f"{arch}-apple-darwin"
+    sidecar_name = f"brian-backend-{triple}"
+    
+    candidates = []
+    
+    # 1. Check relative to the running executable (works inside .app bundle)
+    #    PyInstaller onefile: sys.executable is the temp-unpacked binary,
+    #    but sys._MEIPASS or the original argv[0] may help.
+    exe = Path(sys.executable).resolve()
+    
+    # Walk up looking for a Resources/binaries/ directory (Tauri .app layout)
+    for parent in exe.parents:
+        candidate = parent / "Resources" / "binaries" / sidecar_name
+        if candidate.exists():
+            candidates.append(str(candidate))
+            break
+        # Also check if we're already in the binaries dir
+        candidate = parent / "binaries" / sidecar_name
+        if candidate.exists():
+            candidates.append(str(candidate))
+            break
+        # Stop if we've gone past the .app
+        if parent.suffix == ".app" or parent == parent.parent:
+            break
+    
+    # 2. Check the dev/build location
+    dev_binary = Path(__file__).resolve().parents[2] / "src-tauri" / "binaries" / sidecar_name
+    if dev_binary.exists():
+        candidates.append(str(dev_binary))
+    
+    # 3. Check common macOS install locations
+    app_binary = Path("/Applications/Brian.app/Contents/Resources/binaries") / sidecar_name
+    if app_binary.exists():
+        candidates.append(str(app_binary))
+    
+    return candidates[0] if candidates else None
+
+
+def _get_mcp_command() -> tuple:
+    """
+    Determine the best command + args to run Brian as an MCP stdio server.
+    
+    Prefers the sidecar binary (no Python dependency needed), falls back to
+    system Python + pip install.
+    
+    Returns (command: str, args: list[str], needs_pip_install: bool)
+    """
     import shutil
     from pathlib import Path
     
-    tool = data.get("tool")
-    if not tool:
-        raise HTTPException(status_code=400, detail="Missing 'tool' field")
+    # Prefer the sidecar binary — works in signed .app without system Python
+    sidecar = _find_sidecar_binary()
+    if sidecar:
+        return (sidecar, ["--mcp"], False)
     
-    brian_db = str(Path.home() / ".brian" / "brian.db")
-    
-    # Find a usable Python — sys.executable may be the PyInstaller sidecar,
-    # not a real Python interpreter. Try common locations.
+    # Fallback: find a system Python
     python_bin = None
     for candidate in [
         shutil.which("python3"),
@@ -1310,17 +1373,106 @@ async def connect_tool(data: dict):
             python_bin = candidate
             break
     
-    if not python_bin:
-        raise HTTPException(status_code=500, detail="Could not find Python interpreter")
+    if python_bin:
+        return (python_bin, ["-m", "brian_mcp.server"], True)
+    
+    return (None, [], False)
+
+
+@router.post("/tools/connect")
+async def connect_tool(data: dict):
+    """Connect Brian as an MCP server to an AI tool by writing its config file."""
+    import json
+    from pathlib import Path
+    
+    tool = data.get("tool")
+    if not tool:
+        raise HTTPException(status_code=400, detail="Missing 'tool' field")
+    
+    brian_db = str(Path.home() / ".brian" / "brian.db")
+    
+    cmd, args, needs_install = _get_mcp_command()
+    if not cmd:
+        raise HTTPException(
+            status_code=500,
+            detail="Could not find sidecar binary or Python interpreter"
+        )
+    
+    # Only pip-install when falling back to system Python
+    if needs_install:
+        _ensure_brian_installed(cmd)
     
     if tool == "goose":
-        return _connect_goose(python_bin, brian_db)
+        return _connect_goose(cmd, args, brian_db)
     elif tool == "claude":
-        return _connect_claude(python_bin, brian_db)
+        return _connect_claude(cmd, args, brian_db)
     elif tool == "cursor":
-        return _connect_cursor(python_bin, brian_db)
+        return _connect_cursor(cmd, args, brian_db)
     else:
         raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
+
+
+@router.post("/tools/auto-connect")
+async def auto_connect_tools():
+    """
+    Automatically configure Brian MCP for all detected AI tools.
+    
+    Called during onboarding — silently writes config for every tool whose
+    config directory exists (i.e. the tool is installed).  Uses the sidecar
+    binary so no pip install or system Python is needed.
+    """
+    from pathlib import Path
+    
+    brian_db = str(Path.home() / ".brian" / "brian.db")
+    
+    cmd, args, needs_install = _get_mcp_command()
+    if not cmd:
+        raise HTTPException(
+            status_code=500,
+            detail="Could not find sidecar binary or Python interpreter"
+        )
+    
+    if needs_install:
+        try:
+            _ensure_brian_installed(cmd)
+        except Exception:
+            pass  # Best-effort during onboarding
+    
+    results = {}
+    
+    # Goose — always configure (creates config dir if needed)
+    try:
+        results["goose"] = _connect_goose(cmd, args, brian_db)
+    except Exception as e:
+        results["goose"] = {"status": "error", "detail": str(e)}
+    
+    # Claude Desktop — only if the app is installed
+    claude_support = Path.home() / "Library" / "Application Support" / "Claude"
+    if claude_support.exists():
+        try:
+            results["claude"] = _connect_claude(cmd, args, brian_db)
+        except Exception as e:
+            results["claude"] = {"status": "error", "detail": str(e)}
+    else:
+        results["claude"] = {"status": "skipped", "detail": "Claude Desktop not installed"}
+    
+    # Cursor — only if installed
+    cursor_dir = Path.home() / ".cursor"
+    if cursor_dir.exists():
+        try:
+            results["cursor"] = _connect_cursor(cmd, args, brian_db)
+        except Exception as e:
+            results["cursor"] = {"status": "error", "detail": str(e)}
+    else:
+        results["cursor"] = {"status": "skipped", "detail": "Cursor not installed"}
+    
+    return {
+        "auto_connect": True,
+        "mcp_command": cmd,
+        "mcp_args": args,
+        "using_sidecar": not needs_install,
+        "results": results,
+    }
 
 
 @router.get("/tools/status")
@@ -1374,16 +1526,29 @@ async def get_tool_status():
     return status
 
 
-def _connect_goose(python_bin: str, brian_db: str) -> dict:
+@router.get("/tools/mcp-info")
+async def get_mcp_info():
+    """Return info about the MCP server command for manual configuration."""
+    from pathlib import Path
+    
+    cmd, args, needs_install = _get_mcp_command()
+    brian_db = str(Path.home() / ".brian" / "brian.db")
+    
+    return {
+        "command": cmd,
+        "args": args,
+        "using_sidecar": not needs_install,
+        "env": {"BRIAN_DB_PATH": brian_db},
+    }
+
+
+def _connect_goose(cmd: str, args: list, brian_db: str) -> dict:
     """Add Brian extension to Goose config.yaml."""
     import yaml
     from pathlib import Path
     
     config_path = Path.home() / ".config" / "goose" / "config.yaml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    # Ensure brian is installed for the MCP server
-    _ensure_brian_installed(python_bin)
     
     cfg = {}
     if config_path.exists():
@@ -1398,8 +1563,8 @@ def _connect_goose(python_bin: str, brian_db: str) -> dict:
         "type": "stdio",
         "name": "Brian",
         "description": "Personal knowledge base with semantic search",
-        "cmd": python_bin,
-        "args": ["-m", "brian_mcp.server"],
+        "cmd": cmd,
+        "args": args,
         "envs": {"BRIAN_DB_PATH": brian_db},
         "env_keys": [],
         "timeout": 300,
@@ -1411,15 +1576,13 @@ def _connect_goose(python_bin: str, brian_db: str) -> dict:
     return {"tool": "goose", "status": "connected", "config_path": str(config_path)}
 
 
-def _connect_claude(python_bin: str, brian_db: str) -> dict:
+def _connect_claude(cmd: str, args: list, brian_db: str) -> dict:
     """Add Brian MCP server to Claude Desktop config."""
     import json
     from pathlib import Path
     
     config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    _ensure_brian_installed(python_bin)
     
     cfg = {}
     if config_path.exists():
@@ -1430,8 +1593,8 @@ def _connect_claude(python_bin: str, brian_db: str) -> dict:
         cfg["mcpServers"] = {}
     
     cfg["mcpServers"]["brian"] = {
-        "command": python_bin,
-        "args": ["-m", "brian_mcp.server"],
+        "command": cmd,
+        "args": args,
         "env": {"BRIAN_DB_PATH": brian_db},
     }
     
@@ -1441,15 +1604,13 @@ def _connect_claude(python_bin: str, brian_db: str) -> dict:
     return {"tool": "claude", "status": "connected", "config_path": str(config_path)}
 
 
-def _connect_cursor(python_bin: str, brian_db: str) -> dict:
+def _connect_cursor(cmd: str, args: list, brian_db: str) -> dict:
     """Add Brian MCP server to Cursor config."""
     import json
     from pathlib import Path
     
     config_path = Path.home() / ".cursor" / "mcp.json"
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    _ensure_brian_installed(python_bin)
     
     cfg = {}
     if config_path.exists():
@@ -1460,8 +1621,8 @@ def _connect_cursor(python_bin: str, brian_db: str) -> dict:
         cfg["mcpServers"] = {}
     
     cfg["mcpServers"]["brian"] = {
-        "command": python_bin,
-        "args": ["-m", "brian_mcp.server"],
+        "command": cmd,
+        "args": args,
         "env": {"BRIAN_DB_PATH": brian_db},
     }
     
@@ -1472,7 +1633,7 @@ def _connect_cursor(python_bin: str, brian_db: str) -> dict:
 
 
 def _ensure_brian_installed(python_bin: str):
-    """Install brian package from GitHub if not already available."""
+    """Install brian package from GitHub if not already available (fallback for system Python)."""
     import subprocess
     
     # Check if brian_mcp is importable
@@ -1482,12 +1643,34 @@ def _ensure_brian_installed(python_bin: str):
     )
     
     if result.returncode == 0:
-        return  # Already installed
+        return True  # Already installed
     
     # Install from GitHub
     print("Installing brian MCP server...")
-    subprocess.run(
+    result = subprocess.run(
         [python_bin, "-m", "pip", "install", 
          "git+https://github.com/spencrmartin/brian.git"],
         capture_output=True, timeout=120
     )
+    
+    if result.returncode != 0:
+        stderr = result.stderr.decode() if result.stderr else ""
+        print(f"  ✗ pip install failed: {stderr[:200]}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to install brian MCP server. Run manually: pip3 install git+https://github.com/spencrmartin/brian.git"
+        )
+    
+    # Verify it installed
+    verify = subprocess.run(
+        [python_bin, "-c", "import brian_mcp; print('ok')"],
+        capture_output=True, timeout=10
+    )
+    if verify.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail="brian_mcp installed but failed to import. Check Python environment."
+        )
+    
+    print("  ✓ brian MCP server installed")
+    return True

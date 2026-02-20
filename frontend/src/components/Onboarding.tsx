@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getApiBaseUrl } from '@/lib/backend';
 import PixelBlast from '@/components/PixelBlast';
@@ -172,7 +172,7 @@ function WelcomeStep({ name, onNext, accentColor }: { name: string; onNext: () =
   );
 }
 
-// ── Step 2: Connect AI Tools ────────────────────────────────────────────────
+// ── Step 2: Connect AI Tools (auto-installs MCP on mount) ───────────────────
 
 function ConnectToolsStep({
   onNext,
@@ -183,22 +183,57 @@ function ConnectToolsStep({
 }) {
   const [connecting, setConnecting] = useState<string | null>(null);
   const [connected, setConnected] = useState<string[]>([]);
+  const [skipped, setSkipped] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [autoConnecting, setAutoConnecting] = useState(true);
+  const [usingSidecar, setUsingSidecar] = useState(false);
 
-  // Check which tools are already connected on mount
-  useState(() => {
-    fetch(`${getApiBaseUrl()}/tools/status`)
-      .then((res) => res.json())
-      .then((status: Record<string, boolean>) => {
-        const alreadyConnected = Object.entries(status)
-          .filter(([, v]) => v)
-          .map(([k]) => k);
-        if (alreadyConnected.length > 0) {
-          setConnected(alreadyConnected);
+  // Auto-connect all detected tools on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        // Fire auto-connect — backend will configure all detected tools
+        const res = await fetch(`${getApiBaseUrl()}/tools/auto-connect`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setUsingSidecar(data.using_sidecar ?? false);
+
+          const connectedTools: string[] = [];
+          const skippedTools: string[] = [];
+
+          for (const [tool, result] of Object.entries(data.results ?? {})) {
+            const r = result as { status?: string };
+            if (r.status === 'connected') {
+              connectedTools.push(tool);
+            } else if (r.status === 'skipped') {
+              skippedTools.push(tool);
+            }
+          }
+
+          setConnected(connectedTools);
+          setSkipped(skippedTools);
+        } else {
+          // Auto-connect failed — fall back to checking status
+          const statusRes = await fetch(`${getApiBaseUrl()}/tools/status`);
+          if (statusRes.ok) {
+            const status: Record<string, boolean> = await statusRes.json();
+            const alreadyConnected = Object.entries(status)
+              .filter(([, v]) => v)
+              .map(([k]) => k);
+            setConnected(alreadyConnected);
+          }
         }
-      })
-      .catch(() => {});
-  });
+      } catch {
+        // Silent fail — user can still manually connect
+      } finally {
+        setAutoConnecting(false);
+      }
+    })();
+  }, []);
 
   const tools = [
     {
@@ -223,16 +258,37 @@ function ConnectToolsStep({
 
   const [showMcp, setShowMcp] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [mcpConfig, setMcpConfig] = useState('');
 
-  const mcpConfig = JSON.stringify({
-    mcpServers: {
-      brian: {
-        command: 'python',
-        args: ['-m', 'brian_mcp.server'],
-        env: { BRIAN_DB_PATH: '~/.brian/brian.db' },
-      },
-    },
-  }, null, 2);
+  // Fetch the real MCP config from the backend (uses sidecar path when available)
+  useEffect(() => {
+    fetch(`${getApiBaseUrl()}/tools/mcp-info`)
+      .then((res) => res.json())
+      .then((info: { command?: string; args?: string[]; env?: Record<string, string> }) => {
+        const config = JSON.stringify({
+          mcpServers: {
+            brian: {
+              command: info.command ?? 'brian-backend',
+              args: info.args ?? ['--mcp'],
+              env: info.env ?? { BRIAN_DB_PATH: '~/.brian/brian.db' },
+            },
+          },
+        }, null, 2);
+        setMcpConfig(config);
+      })
+      .catch(() => {
+        // Fallback config
+        setMcpConfig(JSON.stringify({
+          mcpServers: {
+            brian: {
+              command: 'brian-backend',
+              args: ['--mcp'],
+              env: { BRIAN_DB_PATH: '~/.brian/brian.db' },
+            },
+          },
+        }, null, 2));
+      });
+  }, []);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(mcpConfig);
@@ -251,6 +307,7 @@ function ConnectToolsStep({
       });
       if (res.ok) {
         setConnected((prev) => [...prev, toolId]);
+        setSkipped((prev) => prev.filter((t) => t !== toolId));
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.detail || 'Connection failed');
@@ -274,25 +331,29 @@ function ConnectToolsStep({
           Connect Your AI Tools
         </h2>
         <p className="text-sm text-muted-foreground font-light">
-          Brian works as an MCP server — connect it to your favourite AI
-          assistant so it can search your knowledge base.
+          {autoConnecting
+            ? 'Setting up Brian as an MCP server for your AI tools…'
+            : 'Brian works as an MCP server — your detected tools have been configured automatically.'}
         </p>
       </div>
 
       <div className="w-full flex flex-col gap-2">
         {tools.map((tool) => {
           const isConnected = connected.includes(tool.id);
-          const isConnecting = connecting === tool.id;
+          const isSkipped = skipped.includes(tool.id);
+          const isConnecting = connecting === tool.id || (autoConnecting && !isConnected && !isSkipped);
 
           return (
             <button
               key={tool.id}
-              onClick={() => !isConnected && handleConnect(tool.id)}
-              disabled={isConnecting}
+              onClick={() => !isConnected && !autoConnecting && handleConnect(tool.id)}
+              disabled={isConnecting || autoConnecting}
               className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${
                 isConnected
                   ? 'border-border bg-muted/50'
-                  : 'border-border/50 bg-card hover:bg-muted/50 hover:border-border'
+                  : isSkipped
+                    ? 'border-border/30 bg-card/50 opacity-60'
+                    : 'border-border/50 bg-card hover:bg-muted/50 hover:border-border'
               }`}
             >
               <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted text-foreground/70 text-xl shrink-0">
@@ -300,7 +361,9 @@ function ConnectToolsStep({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground">{tool.name}</p>
-                <p className="text-xs text-muted-foreground">{tool.description}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isSkipped ? 'Not installed' : tool.description}
+                </p>
               </div>
               <div className="shrink-0">
                 {isConnected ? (
@@ -309,6 +372,8 @@ function ConnectToolsStep({
                   </svg>
                 ) : isConnecting ? (
                   <div className="w-4 h-4 border-2 border-border border-t-foreground/60 rounded-full animate-spin" />
+                ) : isSkipped ? (
+                  <span className="text-xs text-muted-foreground/50">—</span>
                 ) : (
                   <span className="text-xs text-muted-foreground">Connect</span>
                 )}
@@ -347,9 +412,12 @@ function ConnectToolsStep({
               className="w-full overflow-hidden"
             >
               <div className="relative rounded-xl border border-border bg-muted/30 p-4">
-                <pre className="text-xs text-foreground/70 font-mono whitespace-pre overflow-x-auto">{mcpConfig}</pre>
+                <pre className="text-xs text-foreground/70 font-mono whitespace-pre overflow-x-auto">
+                  {mcpConfig || 'Loading...'}
+                </pre>
                 <button
                   onClick={handleCopy}
+                  disabled={!mcpConfig}
                   className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-muted text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {copied ? 'Copied!' : 'Copy'}
@@ -359,6 +427,12 @@ function ConnectToolsStep({
           )}
         </AnimatePresence>
       </div>
+
+      {usingSidecar && !autoConnecting && connected.length > 0 && (
+        <p className="text-xs text-muted-foreground/70">
+          ✓ Using bundled MCP server — no Python installation required
+        </p>
+      )}
 
       {error && (
         <p className="text-xs text-destructive">{error}</p>
@@ -373,9 +447,10 @@ function ConnectToolsStep({
         </button>
         <button
           onClick={onNext}
-          className="flex-1 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring"
+          disabled={autoConnecting}
+          className="flex-1 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
         >
-          Continue
+          {autoConnecting ? 'Configuring…' : 'Continue'}
         </button>
       </div>
     </motion.div>
