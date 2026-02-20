@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getApiBaseUrl } from '@/lib/backend';
 
 const ONBOARDING_KEY = 'brian_onboarding_complete';
+const USER_NAME_KEY = 'brian_user_name';
 
 interface UseOnboardingReturn {
   showOnboarding: boolean;
@@ -11,28 +12,38 @@ interface UseOnboardingReturn {
 }
 
 /**
- * Hook to manage first-run onboarding state.
+ * Hook to manage first-run onboarding and login state.
  *
  * Shows onboarding when:
- * - localStorage flag is not set AND
- * - The knowledge base has zero items (fresh install)
+ * - No user name is stored (never logged in / logged out), OR
+ * - Onboarding flag is not set AND knowledge base is empty (fresh install)
  *
- * Once the user completes onboarding (or skips it), the flag is set
- * and onboarding never shows again.
+ * After the user completes onboarding, both the name and flag are set
+ * and onboarding never shows again until they log out.
  */
 export function useOnboarding(): UseOnboardingReturn {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // If already completed, skip
-    if (localStorage.getItem(ONBOARDING_KEY) === 'true') {
+    const userName = localStorage.getItem(USER_NAME_KEY);
+    const onboardingComplete = localStorage.getItem(ONBOARDING_KEY) === 'true';
+
+    // If no user name stored, always show onboarding (login screen)
+    if (!userName) {
+      setShowOnboarding(true);
+      setIsLoading(false);
+      return;
+    }
+
+    // If user exists and onboarding was completed, skip
+    if (onboardingComplete) {
       setShowOnboarding(false);
       setIsLoading(false);
       return;
     }
 
-    // Check if knowledge base is empty
+    // User exists but onboarding not completed — check if KB is empty
     const checkEmpty = async () => {
       try {
         const res = await fetch(`${getApiBaseUrl()}/stats`, {
@@ -43,7 +54,6 @@ export function useOnboarding(): UseOnboardingReturn {
           setShowOnboarding(stats.total_items === 0);
         }
       } catch {
-        // If we can't reach the backend yet, don't show onboarding
         setShowOnboarding(false);
       } finally {
         setIsLoading(false);
@@ -60,6 +70,7 @@ export function useOnboarding(): UseOnboardingReturn {
 
   const resetOnboarding = () => {
     localStorage.removeItem(ONBOARDING_KEY);
+    localStorage.removeItem(USER_NAME_KEY);
     setShowOnboarding(true);
   };
 

@@ -21,9 +21,11 @@ import {
   Database,
   Palette,
   LayoutGrid,
-  AlertTriangle
+  AlertTriangle,
+  LogOut
 } from 'lucide-react'
 import { useSettings } from '@/contexts/SettingsContext'
+import { getUserName } from '@/components/Onboarding'
 
 export function Settings({ items = [], onImport }) {
   const { 
@@ -322,8 +324,11 @@ export function Settings({ items = [], onImport }) {
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm text-muted-foreground">
-              <p><strong>Version:</strong> 1.0.0</p>
+              <p><strong>Version:</strong> 0.1.0</p>
               <p><strong>Database:</strong> ~/.brian/brian.db</p>
+              {getUserName() && (
+                <p><strong>Logged in as:</strong> {getUserName()}</p>
+              )}
               <p className="pt-2">
                 Brian is your personal knowledge base for storing and connecting ideas, 
                 links, notes, and code snippets.
@@ -331,6 +336,28 @@ export function Settings({ items = [], onImport }) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Log Out */}
+        <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div>
+            <h4 className="font-medium">Log Out</h4>
+            <p className="text-sm text-muted-foreground">
+              {getUserName() ? `Signed in as ${getUserName()}` : 'Return to login screen'}
+            </p>
+          </div>
+          <Button 
+            onClick={() => {
+              localStorage.removeItem('brian_onboarding_complete')
+              localStorage.removeItem('brian_user_name')
+              window.location.reload()
+            }} 
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <LogOut className="w-4 h-4" />
+            Log Out
+          </Button>
+        </div>
       </div>
 
       {/* Clear Data Confirmation Dialog */}
