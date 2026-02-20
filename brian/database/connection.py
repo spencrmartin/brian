@@ -71,6 +71,9 @@ class Database:
             cursor.executescript(SCHEMA_SQL)
             cursor.execute(get_schema_version_sql())
             conn.commit()
+            
+            # Create default project for new databases
+            self._ensure_default_project()
             print("Database initialized successfully!")
         else:
             # Check schema version
@@ -87,6 +90,40 @@ class Database:
                     f"Please update Brian to the latest version."
                 )
     
+    def _ensure_default_project(self):
+        """Create a default project if none exists. Required for fresh databases."""
+        conn = self.connect()
+        cursor = conn.cursor()
+        
+        # Check if any default project exists
+        cursor.execute("SELECT id FROM projects WHERE is_default = 1")
+        if cursor.fetchone() is not None:
+            return
+        
+        # Check if any projects exist at all
+        cursor.execute("SELECT COUNT(*) FROM projects")
+        count = cursor.fetchone()[0]
+        if count > 0:
+            return
+        
+        # Create the default project
+        import uuid
+        project_id = str(uuid.uuid4())
+        cursor.execute("""
+            INSERT INTO projects (id, name, description, color, icon, is_default, is_archived)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            project_id,
+            "General",
+            "General knowledge base",
+            "#8b5cf6",
+            "globe",
+            True,
+            False,
+        ))
+        conn.commit()
+        print(f"  ✓ Created default project: General ({project_id})")
+
     def get_schema_version(self) -> int:
         """Return the current schema version of the database."""
         conn = self.connect()
