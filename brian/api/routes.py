@@ -1287,7 +1287,7 @@ async def restore_backup(data: dict):
 async def connect_tool(data: dict):
     """Connect Brian as an MCP server to an AI tool by writing its config file."""
     import json
-    import sys
+    import shutil
     from pathlib import Path
     
     tool = data.get("tool")
@@ -1295,7 +1295,23 @@ async def connect_tool(data: dict):
         raise HTTPException(status_code=400, detail="Missing 'tool' field")
     
     brian_db = str(Path.home() / ".brian" / "brian.db")
-    python_bin = sys.executable
+    
+    # Find a usable Python — sys.executable may be the PyInstaller sidecar,
+    # not a real Python interpreter. Try common locations.
+    python_bin = None
+    for candidate in [
+        shutil.which("python3"),
+        shutil.which("python"),
+        "/opt/homebrew/bin/python3",
+        "/usr/local/bin/python3",
+        "/usr/bin/python3",
+    ]:
+        if candidate and Path(candidate).exists():
+            python_bin = candidate
+            break
+    
+    if not python_bin:
+        raise HTTPException(status_code=500, detail="Could not find Python interpreter")
     
     if tool == "goose":
         return _connect_goose(python_bin, brian_db)
@@ -1366,7 +1382,9 @@ def _connect_goose(python_bin: str, brian_db: str) -> dict:
     config_path = Path.home() / ".config" / "goose" / "config.yaml"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     
-    # Load existing config or start fresh
+    # Ensure brian is installed for the MCP server
+    _ensure_brian_installed(python_bin)
+    
     cfg = {}
     if config_path.exists():
         with open(config_path) as f:
@@ -1401,6 +1419,8 @@ def _connect_claude(python_bin: str, brian_db: str) -> dict:
     config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     
+    _ensure_brian_installed(python_bin)
+    
     cfg = {}
     if config_path.exists():
         with open(config_path) as f:
@@ -1429,6 +1449,8 @@ def _connect_cursor(python_bin: str, brian_db: str) -> dict:
     config_path = Path.home() / ".cursor" / "mcp.json"
     config_path.parent.mkdir(parents=True, exist_ok=True)
     
+    _ensure_brian_installed(python_bin)
+    
     cfg = {}
     if config_path.exists():
         with open(config_path) as f:
@@ -1447,3 +1469,25 @@ def _connect_cursor(python_bin: str, brian_db: str) -> dict:
         json.dump(cfg, f, indent=2)
     
     return {"tool": "cursor", "status": "connected", "config_path": str(config_path)}
+
+
+def _ensure_brian_installed(python_bin: str):
+    """Install brian package from GitHub if not already available."""
+    import subprocess
+    
+    # Check if brian_mcp is importable
+    result = subprocess.run(
+        [python_bin, "-c", "import brian_mcp"],
+        capture_output=True, timeout=10
+    )
+    
+    if result.returncode == 0:
+        return  # Already installed
+    
+    # Install from GitHub
+    print("Installing brian MCP server...")
+    subprocess.run(
+        [python_bin, "-m", "pip", "install", 
+         "git+https://github.com/spencrmartin/brian.git"],
+        capture_output=True, timeout=120
+    )
