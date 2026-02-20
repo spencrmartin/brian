@@ -1289,16 +1289,19 @@ def _find_sidecar_binary() -> Optional[str]:
     Locate the brian-backend sidecar binary.
     
     Tauri places externalBin sidecars in Contents/MacOS/ (next to the main
-    binary), stripping the platform-triple suffix.  So the layout is:
+    Tauri binary), stripping the platform-triple suffix:
         Brian.app/Contents/MacOS/brian-backend
     
-    At runtime the PyInstaller onefile unpacks to a temp dir, so
-    sys.executable points there — but sys.argv[0] or the _MEIPASS-relative
-    path won't help.  Instead we use the process's real binary path via
-    /proc or walk up from the temp dir to find the .app bundle.
+    Challenge: this code runs inside a PyInstaller onefile binary.  At runtime
+    PyInstaller extracts to a temp dir, so sys.executable points to e.g.
+    /var/folders/.../brian-backend — NOT the original .app bundle path.
+    
+    Solution: use macOS proc_pidpath() to resolve our own real binary path,
+    then look for the sidecar next to it.
     
     Returns the absolute path to the sidecar binary, or None if not found.
     """
+    import os
     import sys
     import platform
     from pathlib import Path
@@ -1313,40 +1316,52 @@ def _find_sidecar_binary() -> Optional[str]:
     
     candidates = []
     
-    # 1. Check via sys.argv[0] — Tauri launches the sidecar by its full path,
-    #    so argv[0] is the original binary inside Contents/MacOS/.
-    #    The sidecar lives next to it.
+    # 1. Use macOS proc_pidpath to get our REAL binary path (not the temp
+    #    extraction path that PyInstaller sets in sys.executable).
+    #    This is the most reliable method inside a .app bundle.
+    try:
+        import ctypes
+        import ctypes.util
+        libc = ctypes.CDLL(ctypes.util.find_library("c"))
+        PROC_PIDPATHINFO_MAXSIZE = 4096
+        buf = ctypes.create_string_buffer(PROC_PIDPATHINFO_MAXSIZE)
+        ret = libc.proc_pidpath(os.getpid(), buf, PROC_PIDPATHINFO_MAXSIZE)
+        if ret > 0:
+            real_exe = Path(buf.value.decode())
+            # The sidecar sits next to us in Contents/MacOS/
+            candidate = real_exe.parent / sidecar_name
+            if candidate.exists():
+                candidates.append(str(candidate))
+    except Exception:
+        pass
+    
+    # 2. Check via sys.argv[0] — Tauri may pass the full .app path
     argv0 = Path(sys.argv[0]).resolve() if sys.argv else None
     if argv0 and argv0.parent.name == "MacOS":
         candidate = argv0.parent / sidecar_name
-        if candidate.exists() and candidate != argv0:
+        if candidate.exists() and str(candidate) not in candidates:
             candidates.append(str(candidate))
     
-    # 2. Walk up from sys.executable looking for a MacOS/ dir in a .app bundle
+    # 3. Walk up from sys.executable (works if not PyInstaller temp-extracted)
     exe = Path(sys.executable).resolve()
-    for parent in exe.parents:
-        candidate = parent / "MacOS" / sidecar_name
-        if candidate.exists():
+    if exe.parent.name == "MacOS":
+        candidate = exe.parent / sidecar_name
+        if candidate.exists() and str(candidate) not in candidates:
             candidates.append(str(candidate))
-            break
-        # Also check if we're directly in MacOS/
-        if parent.name == "MacOS":
-            candidate = parent / sidecar_name
-            if candidate.exists():
-                candidates.append(str(candidate))
-            break
-        # Stop at .app boundary or filesystem root
-        if parent.suffix == ".app" or parent == parent.parent:
-            break
     
-    # 3. Check /Applications install location
+    # 4. Check /Applications install location
     app_binary = Path("/Applications/Brian.app/Contents/MacOS") / sidecar_name
-    if app_binary.exists():
+    if app_binary.exists() and str(app_binary) not in candidates:
         candidates.append(str(app_binary))
     
-    # 4. Check the dev/build location (triple-suffixed)
+    # 5. Check ~/Applications (some users install there)
+    home_app = Path.home() / "Applications" / "Brian.app" / "Contents" / "MacOS" / sidecar_name
+    if home_app.exists() and str(home_app) not in candidates:
+        candidates.append(str(home_app))
+    
+    # 6. Check the dev/build location (triple-suffixed)
     dev_binary = Path(__file__).resolve().parents[2] / "src-tauri" / "binaries" / sidecar_name_triple
-    if dev_binary.exists():
+    if dev_binary.exists() and str(dev_binary) not in candidates:
         candidates.append(str(dev_binary))
     
     return candidates[0] if candidates else None
