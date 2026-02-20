@@ -2,14 +2,20 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getApiBaseUrl } from '@/lib/backend';
 
+const USER_NAME_KEY = 'brian_user_name';
+
+/** Get the stored user name (used by other components like HomeView). */
+export function getUserName(): string | null {
+  return localStorage.getItem(USER_NAME_KEY);
+}
+
 // ── Brian Logo (static, colored squares from loading.svg) ───────────────────
 
 function BrianLogo({ size = 14, gap = 2 }: { size?: number; gap?: number }) {
-  // 5×3 grid matching loading.svg colors exactly
   const grid = [
-    ['#FF8000', '#D5FF00', '#FF2F00', '#00E1FF', '#8A38F5'], // row 0
-    ['#00E1FF', '#8A38F5', '#FF8000', '#D5FF00', '#FF2F00'], // row 1
-    ['#FF8000', '#FF2F00', '#D5FF00', '#00E1FF', '#8A38F5'], // row 2
+    ['#FF8000', '#D5FF00', '#FF2F00', '#00E1FF', '#8A38F5'],
+    ['#00E1FF', '#8A38F5', '#FF8000', '#D5FF00', '#FF2F00'],
+    ['#FF8000', '#FF2F00', '#D5FF00', '#00E1FF', '#8A38F5'],
   ];
 
   return (
@@ -39,9 +45,57 @@ function BrianLogo({ size = 14, gap = 2 }: { size?: number; gap?: number }) {
   );
 }
 
-// ── Step Components ─────────────────────────────────────────────────────────
+// ── Step 0: Login / Landing ─────────────────────────────────────────────────
 
-function WelcomeStep({ onNext }: { onNext: () => void }) {
+function LoginStep({ onNext }: { onNext: (name: string) => void }) {
+  const [name, setName] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim()) {
+      onNext(name.trim());
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.5 }}
+      className="flex flex-col items-center gap-10 max-w-sm text-center"
+    >
+      <BrianLogo size={22} gap={3} />
+
+      <p className="text-sm text-white/35 font-light tracking-wide">
+        Keep your knowledge local
+      </p>
+
+      <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
+        <input
+          type="text"
+          placeholder="Your name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoFocus
+          className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/8 text-white/90 text-sm text-center placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
+        />
+
+        <button
+          type="submit"
+          disabled={!name.trim()}
+          className="w-full px-6 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-white/20 disabled:opacity-20 disabled:cursor-not-allowed"
+        >
+          Log in
+        </button>
+      </form>
+    </motion.div>
+  );
+}
+
+// ── Step 1: This is Brian ───────────────────────────────────────────────────
+
+function WelcomeStep({ name, onNext }: { name: string; onNext: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -53,7 +107,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 
       <div className="flex flex-col gap-3">
         <h1 className="text-3xl font-light text-white/90">
-          Welcome to Brian
+          Hey {name}, this is Brian
         </h1>
         <p className="text-base text-white/40 font-light leading-relaxed">
           Your personal knowledge base. Save notes, links, code snippets, and
@@ -71,6 +125,8 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
   );
 }
 
+// ── Step 2: Connect AI Tools ────────────────────────────────────────────────
+
 function ConnectToolsStep({
   onNext,
   onSkip,
@@ -85,15 +141,13 @@ function ConnectToolsStep({
     {
       id: 'goose',
       name: 'Goose',
-      description: 'Block\'s open-source AI agent',
-      configHint: 'Adds Brian as a stdio MCP extension',
+      description: "Block's open-source AI agent",
       icon: '🪿',
     },
     {
       id: 'claude',
       name: 'Claude Desktop',
-      description: 'Anthropic\'s desktop assistant',
-      configHint: 'Adds Brian to claude_desktop_config.json',
+      description: "Anthropic's desktop assistant",
       icon: (
         <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm2.07-7.75l-.9.92C11.45 10.9 11 11.5 11 13H9v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H6c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" />
@@ -104,7 +158,6 @@ function ConnectToolsStep({
       id: 'cursor',
       name: 'Cursor',
       description: 'AI-powered code editor',
-      configHint: 'Adds Brian as an MCP server',
       icon: (
         <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
           <path d="M4 4l16 8-16 8V4z" />
@@ -115,22 +168,16 @@ function ConnectToolsStep({
 
   const handleConnect = async (toolId: string) => {
     setConnecting(toolId);
-
-    // Simulate connection setup (in a real implementation, this would
-    // call a backend endpoint that writes the config file)
     try {
       const res = await fetch(`${getApiBaseUrl()}/tools/connect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tool: toolId }),
       });
-
       if (res.ok) {
         setConnected((prev) => [...prev, toolId]);
       }
     } catch {
-      // If the endpoint doesn't exist yet, just mark as connected
-      // for the onboarding flow — the actual config can be done later
       setConnected((prev) => [...prev, toolId]);
     } finally {
       setConnecting(null);
@@ -171,25 +218,15 @@ function ConnectToolsStep({
               }`}
             >
               <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/[0.06] text-white/70 text-xl shrink-0">
-                {typeof tool.icon === 'string' ? tool.icon : tool.icon}
+                {tool.icon}
               </div>
-
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white/80">
-                  {tool.name}
-                </p>
+                <p className="text-sm font-medium text-white/80">{tool.name}</p>
                 <p className="text-xs text-white/35">{tool.description}</p>
               </div>
-
               <div className="shrink-0">
                 {isConnected ? (
-                  <svg
-                    className="w-5 h-5 text-white/50"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                  >
+                  <svg className="w-5 h-5 text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 ) : isConnecting ? (
@@ -221,11 +258,9 @@ function ConnectToolsStep({
   );
 }
 
-function AddFirstItemStep({
-  onComplete,
-}: {
-  onComplete: () => void;
-}) {
+// ── Step 3: Add First Item ──────────────────────────────────────────────────
+
+function AddFirstItemStep({ onComplete }: { onComplete: () => void }) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [saving, setSaving] = useState(false);
@@ -233,7 +268,6 @@ function AddFirstItemStep({
 
   const handleSave = async () => {
     if (!title.trim()) return;
-
     setSaving(true);
     try {
       const res = await fetch(`${getApiBaseUrl()}/items`, {
@@ -246,13 +280,11 @@ function AddFirstItemStep({
           tags: ['getting-started'],
         }),
       });
-
       if (res.ok) {
         setSaved(true);
         setTimeout(onComplete, 800);
       }
     } catch {
-      // Still complete onboarding even if save fails
       onComplete();
     } finally {
       setSaving(false);
@@ -293,7 +325,6 @@ function AddFirstItemStep({
             rows={4}
             className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/8 text-white/90 text-sm placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors resize-none"
           />
-
           <div className="flex gap-3 mt-2">
             <button
               onClick={onComplete}
@@ -316,13 +347,7 @@ function AddFirstItemStep({
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center gap-3"
         >
-          <svg
-            className="w-8 h-8 text-white/60"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-          >
+          <svg className="w-8 h-8 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <polyline points="20 6 9 17 4 12" />
           </svg>
           <p className="text-sm text-white/50">Saved! Launching Brian...</p>
@@ -334,13 +359,7 @@ function AddFirstItemStep({
 
 // ── Step Indicator ──────────────────────────────────────────────────────────
 
-function StepDots({
-  total,
-  current,
-}: {
-  total: number;
-  current: number;
-}) {
+function StepDots({ total, current }: { total: number; current: number }) {
   return (
     <div className="flex gap-1.5">
       {Array.from({ length: total }).map((_, i) => (
@@ -367,29 +386,38 @@ interface OnboardingProps {
 
 export function Onboarding({ onComplete }: OnboardingProps) {
   const [step, setStep] = useState(0);
-  const totalSteps = 3;
+  const [userName, setUserName] = useState('');
+  const totalSteps = 4;
+
+  const handleLogin = (name: string) => {
+    localStorage.setItem(USER_NAME_KEY, name);
+    setUserName(name);
+    setStep(1);
+  };
 
   return (
     <div className="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-[#0a0a0a]">
       <div className="flex-1 flex items-center justify-center px-6">
         <AnimatePresence mode="wait">
           {step === 0 && (
-            <WelcomeStep key="welcome" onNext={() => setStep(1)} />
+            <LoginStep key="login" onNext={handleLogin} />
           )}
           {step === 1 && (
-            <ConnectToolsStep
-              key="connect"
-              onNext={() => setStep(2)}
-              onSkip={() => setStep(2)}
-            />
+            <WelcomeStep key="welcome" name={userName} onNext={() => setStep(2)} />
           )}
           {step === 2 && (
+            <ConnectToolsStep
+              key="connect"
+              onNext={() => setStep(3)}
+              onSkip={() => setStep(3)}
+            />
+          )}
+          {step === 3 && (
             <AddFirstItemStep key="add-item" onComplete={onComplete} />
           )}
         </AnimatePresence>
       </div>
 
-      {/* Step dots at bottom */}
       <div className="pb-10">
         <StepDots total={totalSteps} current={step} />
       </div>
