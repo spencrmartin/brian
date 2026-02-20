@@ -195,27 +195,19 @@ function ConnectToolsStep({
       id: 'goose',
       name: 'Goose',
       description: "Block's open-source AI agent",
-      icon: '🪿',
+      icon: <img src="/goose-logo.png" alt="Goose" className="w-6 h-6 object-contain" />,
     },
     {
       id: 'claude',
       name: 'Claude Desktop',
       description: "Anthropic's desktop assistant",
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm2.07-7.75l-.9.92C11.45 10.9 11 11.5 11 13H9v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H6c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" />
-        </svg>
-      ),
+      icon: <img src="/claude-logo.svg" alt="Claude" className="w-6 h-6 object-contain" />,
     },
     {
       id: 'cursor',
       name: 'Cursor',
       description: 'AI-powered code editor',
-      icon: (
-        <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-          <path d="M4 4l16 8-16 8V4z" />
-        </svg>
-      ),
+      icon: <img src="/cursor-logo.png" alt="Cursor" className="w-6 h-6 object-contain" />,
     },
   ];
 
