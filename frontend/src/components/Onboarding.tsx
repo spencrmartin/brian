@@ -67,11 +67,13 @@ function LoginStep({ onNext }: { onNext: (name: string) => void }) {
     >
       <BrianLogo size={22} gap={3} />
 
-      <p className="text-sm text-muted-foreground font-light tracking-wide mt-16">
+      <h1 className="text-2xl font-light text-foreground mt-10">brian</h1>
+
+      <p className="text-sm text-muted-foreground font-light tracking-wide mt-2">
         Keep your knowledge local
       </p>
 
-      <form onSubmit={handleSubmit} className="w-full mt-8 flex flex-col gap-6">
+      <form onSubmit={handleSubmit} className="w-full mt-10 flex flex-col gap-4 items-start">
         <input
           type="text"
           placeholder="Your name"
@@ -84,7 +86,7 @@ function LoginStep({ onNext }: { onNext: (name: string) => void }) {
         <button
           type="submit"
           disabled={!name.trim()}
-          className="self-end px-8 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-20 disabled:cursor-not-allowed"
+          className="px-8 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-20 disabled:cursor-not-allowed"
         >
           Log in
         </button>
