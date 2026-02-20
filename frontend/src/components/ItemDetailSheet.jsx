@@ -90,10 +90,10 @@ export function ItemDetailSheet({
   }, [item?.content])
 
   const handleDelete = () => {
-    if (confirm(`Delete "${item.title}"?`)) {
-      onDelete?.(item)
-      onClose()
-    }
+    // Don't use confirm() — it's blocked in Tauri's webview.
+    // App.jsx wires onDelete to open a DeleteConfirmDialog instead.
+    onDelete?.(item)
+    onClose()
   }
 
   if (!item) return null

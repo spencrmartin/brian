@@ -97,6 +97,96 @@ def create_app(config: Config = None) -> FastAPI:
     return app
 
 
+def _repair_mcp_configs():
+    """
+    Startup self-heal: verify MCP tool configs point at a working sidecar
+    binary and fix them if they don't.
+    
+    This catches the case where a previous (broken) onboarding wrote configs
+    pointing at system Python instead of the bundled sidecar.  Runs every
+    time the backend starts so stale configs are always repaired.
+    """
+    try:
+        from .api.routes import _find_sidecar_binary
+        
+        sidecar = _find_sidecar_binary()
+        if not sidecar:
+            return  # Can't find sidecar — nothing to repair with
+        
+        brian_db = str(Path.home() / ".brian" / "brian.db")
+        repaired = []
+        
+        # ── Goose ────────────────────────────────────────────────────────
+        try:
+            import yaml
+            goose_config = Path.home() / ".config" / "goose" / "config.yaml"
+            if goose_config.exists():
+                with open(goose_config) as f:
+                    cfg = yaml.safe_load(f) or {}
+                brian_ext = cfg.get("extensions", {}).get("brian", {})
+                cmd = brian_ext.get("cmd", "")
+                args = brian_ext.get("args", [])
+                # Repair if pointing at python instead of sidecar
+                if cmd and "brian-backend" not in cmd and brian_ext.get("enabled"):
+                    cfg["extensions"]["brian"].update({
+                        "cmd": sidecar,
+                        "args": ["--mcp"],
+                        "envs": {"BRIAN_DB_PATH": brian_db},
+                    })
+                    with open(goose_config, "w") as f:
+                        yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
+                    repaired.append("goose")
+        except Exception:
+            pass
+        
+        # ── Claude Desktop ───────────────────────────────────────────────
+        try:
+            import json
+            claude_config = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+            if claude_config.exists():
+                with open(claude_config) as f:
+                    cfg = json.load(f)
+                brian_srv = cfg.get("mcpServers", {}).get("brian", {})
+                cmd = brian_srv.get("command", "")
+                if cmd and "brian-backend" not in cmd:
+                    cfg["mcpServers"]["brian"] = {
+                        "command": sidecar,
+                        "args": ["--mcp"],
+                        "env": {"BRIAN_DB_PATH": brian_db},
+                    }
+                    with open(claude_config, "w") as f:
+                        json.dump(cfg, f, indent=2)
+                    repaired.append("claude")
+        except Exception:
+            pass
+        
+        # ── Cursor ───────────────────────────────────────────────────────
+        try:
+            import json
+            cursor_config = Path.home() / ".cursor" / "mcp.json"
+            if cursor_config.exists():
+                with open(cursor_config) as f:
+                    cfg = json.load(f)
+                brian_srv = cfg.get("mcpServers", {}).get("brian", {})
+                cmd = brian_srv.get("command", "")
+                if cmd and "brian-backend" not in cmd:
+                    cfg["mcpServers"]["brian"] = {
+                        "command": sidecar,
+                        "args": ["--mcp"],
+                        "env": {"BRIAN_DB_PATH": brian_db},
+                    }
+                    with open(cursor_config, "w") as f:
+                        json.dump(cfg, f, indent=2)
+                    repaired.append("cursor")
+        except Exception:
+            pass
+        
+        if repaired:
+            print(f"  ✓ Repaired MCP configs for: {', '.join(repaired)}")
+    except Exception as e:
+        print(f"  ⚠ MCP config repair skipped: {e}")
+
+
 def main():
     """Run the application"""
     config = Config()
@@ -113,6 +203,9 @@ def main():
     
     signal.signal(signal.SIGTERM, _signal_handler)
     signal.signal(signal.SIGINT, _signal_handler)
+    
+    # Repair any broken MCP configs from previous installs
+    _repair_mcp_configs()
     
     app = create_app(config)
     
