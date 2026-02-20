@@ -99,16 +99,23 @@ pub fn run() {
                 // Give the sidecar a moment to start and write the port file
                 tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
-                let port = read_backend_port();
-                let url = format!("http://127.0.0.1:{}/health", port);
+                let mut port = read_backend_port();
                 log::info!("Health checking backend on port {} (from port file)…", port);
 
                 for attempt in 1..=MAX_RETRIES {
-                    log::info!("Health check attempt {}/{}…", attempt, MAX_RETRIES);
+                    // Re-read port file each attempt — sidecar may update it after startup
+                    let current_port = read_backend_port();
+                    if current_port != port {
+                        log::info!("Port file updated: {} → {}", port, current_port);
+                        port = current_port;
+                    }
+
+                    let url = format!("http://127.0.0.1:{}/health", port);
+                    log::info!("Health check attempt {}/{} on port {}…", attempt, MAX_RETRIES, port);
+
                     match client.get(&url).send().await {
                         Ok(resp) if resp.status().is_success() => {
                             log::info!("brian-backend is healthy on port {} (attempt {})", port, attempt);
-                            // Emit the port along with the ready event so frontend knows where to connect
                             let _ = health_handle.emit("backend-ready", port);
                             return;
                         }
@@ -123,12 +130,6 @@ pub fn run() {
                         }
                     }
                     tokio::time::sleep(RETRY_DELAY).await;
-
-                    // Re-read port file on each retry in case it wasn't written yet
-                    let new_port = read_backend_port();
-                    if new_port != port {
-                        log::info!("Port file updated: {} → {}", port, new_port);
-                    }
                 }
 
                 log::error!(
