@@ -219,6 +219,25 @@ function ConnectToolsStep({
     },
   ];
 
+  const [showMcp, setShowMcp] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const mcpConfig = JSON.stringify({
+    mcpServers: {
+      brian: {
+        command: 'python',
+        args: ['-m', 'brian_mcp.server'],
+        env: { BRIAN_DB_PATH: '~/.brian/brian.db' },
+      },
+    },
+  }, null, 2);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(mcpConfig);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handleConnect = async (toolId: string) => {
     setConnecting(toolId);
     setError(null);
@@ -295,6 +314,48 @@ function ConnectToolsStep({
             </button>
           );
         })}
+
+        {/* Show MCP Config toggle */}
+        <button
+          onClick={() => setShowMcp(!showMcp)}
+          className="w-full flex items-center gap-4 p-4 rounded-xl border border-dashed border-border/50 text-left hover:bg-muted/30 transition-colors"
+        >
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted text-foreground/50 shrink-0">
+            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 18l2-2-2-2" /><path d="M8 6L6 8l2 2" />
+              <path d="M14.5 4l-5 16" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground/70">MCP Config</p>
+            <p className="text-xs text-muted-foreground">Manual setup for other tools</p>
+          </div>
+          <svg className={`w-4 h-4 text-muted-foreground transition-transform ${showMcp ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+
+        {/* MCP Config panel */}
+        <AnimatePresence>
+          {showMcp && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="w-full overflow-hidden"
+            >
+              <div className="relative rounded-xl border border-border bg-muted/30 p-4">
+                <pre className="text-xs text-foreground/70 font-mono whitespace-pre overflow-x-auto">{mcpConfig}</pre>
+                <button
+                  onClick={handleCopy}
+                  className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-muted text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {error && (
