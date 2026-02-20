@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getApiBaseUrl } from '@/lib/backend';
+import PixelBlast from '@/components/PixelBlast';
+import { useSettings } from '@/contexts/SettingsContext';
 
 const USER_NAME_KEY = 'brian_user_name';
 
@@ -84,7 +86,7 @@ function BrianLogo({ size = 14, gap = 2, animated = false }: { size?: number; ga
 
 // ── Step 0: Login / Landing ─────────────────────────────────────────────────
 
-function LoginStep({ onNext }: { onNext: (name: string) => void }) {
+function LoginStep({ onNext, accentColor }: { onNext: (name: string) => void; accentColor: string }) {
   const [name, setName] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -102,7 +104,9 @@ function LoginStep({ onNext }: { onNext: (name: string) => void }) {
       transition={{ duration: 0.5 }}
       className="flex flex-col items-start w-full max-w-md px-12"
     >
-      <BrianLogo size={22} gap={3} animated />
+      <div className="relative w-24 h-16 rounded-2xl overflow-hidden">
+        <PixelBlast pixelSize={3} color={accentColor} patternScale={2.5} patternDensity={1.2} speed={0.4} edgeFade={0} />
+      </div>
 
       <h1 className="text-2xl font-light text-foreground mt-10">brian</h1>
 
@@ -134,7 +138,7 @@ function LoginStep({ onNext }: { onNext: (name: string) => void }) {
 
 // ── Step 1: This is Brian ───────────────────────────────────────────────────
 
-function WelcomeStep({ name, onNext }: { name: string; onNext: () => void }) {
+function WelcomeStep({ name, onNext, accentColor }: { name: string; onNext: () => void; accentColor: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -142,7 +146,9 @@ function WelcomeStep({ name, onNext }: { name: string; onNext: () => void }) {
       exit={{ opacity: 0, y: -20 }}
       className="flex flex-col items-start w-full max-w-md px-12"
     >
-      <BrianLogo size={20} gap={3} />
+      <div className="relative w-24 h-16 rounded-2xl overflow-hidden">
+        <PixelBlast pixelSize={3} color={accentColor} patternScale={2.5} patternDensity={1.2} speed={0.4} edgeFade={0} />
+      </div>
 
       <h1 className="text-3xl font-light text-foreground mt-16">
         Hey {name}, this is Brian
@@ -501,6 +507,7 @@ interface OnboardingProps {
 export function Onboarding({ onComplete }: OnboardingProps) {
   const [step, setStep] = useState(0);
   const [userName, setUserName] = useState('');
+  const { accentColor } = useSettings();
   const totalSteps = 4;
 
   const handleLogin = (name: string) => {
@@ -514,10 +521,10 @@ export function Onboarding({ onComplete }: OnboardingProps) {
       <div className="flex-1 flex items-center justify-center px-6">
         <AnimatePresence mode="wait">
           {step === 0 && (
-            <LoginStep key="login" onNext={handleLogin} />
+            <LoginStep key="login" onNext={handleLogin} accentColor={accentColor} />
           )}
           {step === 1 && (
-            <WelcomeStep key="welcome" name={userName} onNext={() => setStep(2)} />
+            <WelcomeStep key="welcome" name={userName} onNext={() => setStep(2)} accentColor={accentColor} />
           )}
           {step === 2 && (
             <ConnectToolsStep
