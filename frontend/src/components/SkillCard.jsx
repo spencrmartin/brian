@@ -11,13 +11,12 @@ export default function SkillCard({ item, index }) {
   const { openModal, toggleFavorite, deleteItem } = useStore()
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this skill?')) {
-      const success = await deleteItem(item.id)
-      if (success) {
-        toast.success('Skill deleted successfully')
-      } else {
-        toast.error('Failed to delete skill')
-      }
+    // confirm() is blocked in Tauri's webview — delete directly
+    const success = await deleteItem(item.id)
+    if (success) {
+      toast.success('Skill deleted successfully')
+    } else {
+      toast.error('Failed to delete skill')
     }
   }
 

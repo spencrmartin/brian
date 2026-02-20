@@ -1482,9 +1482,8 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
                         className="h-7 w-7 hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation()
-                          if (confirm(`Delete region "${region.name}"?`)) {
-                            deleteRegion(region.id)
-                          }
+                          // confirm() is blocked in Tauri's webview — delete directly
+                          deleteRegion(region.id)
                         }}
                         title="Delete region"
                       >
