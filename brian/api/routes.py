@@ -1218,3 +1218,232 @@ async def update_project_access(project_id: str):
     # Return updated project
     updated = project_repo.get_by_id(project_id)
     return updated.to_dict()
+
+
+# ── Database Management Endpoints ────────────────────────────────────────────
+
+@router.get("/database/info")
+async def get_database_info():
+    """Get database info including schema version, path, size, and FTS5 status"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    from pathlib import Path
+    db_file = Path(db.db_path)
+    size_mb = round(db_file.stat().st_size / (1024 * 1024), 2) if db_file.exists() else 0
+    
+    return {
+        "path": db.db_path,
+        "size_mb": size_mb,
+        "schema_version": db.get_schema_version(),
+        "sqlite_version": db.get_sqlite_version(),
+        "fts5_available": db.fts5_available(),
+    }
+
+
+@router.get("/database/backups")
+async def list_backups():
+    """List all database backups"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    backups = db.list_backups()
+    return {"count": len(backups), "backups": backups}
+
+
+@router.post("/database/backups")
+async def create_backup():
+    """Create a manual database backup"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    backup_path = db.backup(reason="manual")
+    if backup_path is None:
+        raise HTTPException(status_code=500, detail="Backup failed")
+    
+    return {"path": backup_path, "message": "Backup created successfully"}
+
+
+@router.post("/database/restore")
+async def restore_backup(data: dict):
+    """Restore database from a backup file. Requires {"path": "..."}"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    backup_path = data.get("path")
+    if not backup_path:
+        raise HTTPException(status_code=400, detail="Missing 'path' field")
+    
+    success = db.restore(backup_path)
+    if not success:
+        raise HTTPException(status_code=500, detail="Restore failed")
+    
+    return {"message": "Database restored successfully", "schema_version": db.get_schema_version()}
+
+
+# ── Tool Connection Endpoints ────────────────────────────────────────────────
+
+@router.post("/tools/connect")
+async def connect_tool(data: dict):
+    """Connect Brian as an MCP server to an AI tool by writing its config file."""
+    import json
+    import sys
+    from pathlib import Path
+    
+    tool = data.get("tool")
+    if not tool:
+        raise HTTPException(status_code=400, detail="Missing 'tool' field")
+    
+    brian_db = str(Path.home() / ".brian" / "brian.db")
+    python_bin = sys.executable
+    
+    if tool == "goose":
+        return _connect_goose(python_bin, brian_db)
+    elif tool == "claude":
+        return _connect_claude(python_bin, brian_db)
+    elif tool == "cursor":
+        return _connect_cursor(python_bin, brian_db)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
+
+
+@router.get("/tools/status")
+async def get_tool_status():
+    """Check which AI tools have Brian configured."""
+    import yaml
+    import json
+    from pathlib import Path
+    
+    status = {}
+    
+    # Goose
+    goose_config = Path.home() / ".config" / "goose" / "config.yaml"
+    try:
+        if goose_config.exists():
+            with open(goose_config) as f:
+                cfg = yaml.safe_load(f)
+            exts = cfg.get("extensions", {})
+            status["goose"] = "brian" in exts and exts["brian"].get("enabled", False)
+        else:
+            status["goose"] = False
+    except Exception:
+        status["goose"] = False
+    
+    # Claude Desktop
+    claude_config = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+    try:
+        if claude_config.exists():
+            with open(claude_config) as f:
+                cfg = json.load(f)
+            servers = cfg.get("mcpServers", {})
+            status["claude"] = "brian" in servers
+        else:
+            status["claude"] = False
+    except Exception:
+        status["claude"] = False
+    
+    # Cursor
+    cursor_config = Path.home() / ".cursor" / "mcp.json"
+    try:
+        if cursor_config.exists():
+            with open(cursor_config) as f:
+                cfg = json.load(f)
+            servers = cfg.get("mcpServers", {})
+            status["cursor"] = "brian" in servers
+        else:
+            status["cursor"] = False
+    except Exception:
+        status["cursor"] = False
+    
+    return status
+
+
+def _connect_goose(python_bin: str, brian_db: str) -> dict:
+    """Add Brian extension to Goose config.yaml."""
+    import yaml
+    from pathlib import Path
+    
+    config_path = Path.home() / ".config" / "goose" / "config.yaml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Load existing config or start fresh
+    cfg = {}
+    if config_path.exists():
+        with open(config_path) as f:
+            cfg = yaml.safe_load(f) or {}
+    
+    if "extensions" not in cfg:
+        cfg["extensions"] = {}
+    
+    cfg["extensions"]["brian"] = {
+        "enabled": True,
+        "type": "stdio",
+        "name": "Brian",
+        "description": "Personal knowledge base with semantic search",
+        "cmd": python_bin,
+        "args": ["-m", "brian_mcp.server"],
+        "envs": {"BRIAN_DB_PATH": brian_db},
+        "env_keys": [],
+        "timeout": 300,
+    }
+    
+    with open(config_path, "w") as f:
+        yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
+    
+    return {"tool": "goose", "status": "connected", "config_path": str(config_path)}
+
+
+def _connect_claude(python_bin: str, brian_db: str) -> dict:
+    """Add Brian MCP server to Claude Desktop config."""
+    import json
+    from pathlib import Path
+    
+    config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    cfg = {}
+    if config_path.exists():
+        with open(config_path) as f:
+            cfg = json.load(f)
+    
+    if "mcpServers" not in cfg:
+        cfg["mcpServers"] = {}
+    
+    cfg["mcpServers"]["brian"] = {
+        "command": python_bin,
+        "args": ["-m", "brian_mcp.server"],
+        "env": {"BRIAN_DB_PATH": brian_db},
+    }
+    
+    with open(config_path, "w") as f:
+        json.dump(cfg, f, indent=2)
+    
+    return {"tool": "claude", "status": "connected", "config_path": str(config_path)}
+
+
+def _connect_cursor(python_bin: str, brian_db: str) -> dict:
+    """Add Brian MCP server to Cursor config."""
+    import json
+    from pathlib import Path
+    
+    config_path = Path.home() / ".cursor" / "mcp.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    cfg = {}
+    if config_path.exists():
+        with open(config_path) as f:
+            cfg = json.load(f)
+    
+    if "mcpServers" not in cfg:
+        cfg["mcpServers"] = {}
+    
+    cfg["mcpServers"]["brian"] = {
+        "command": python_bin,
+        "args": ["-m", "brian_mcp.server"],
+        "env": {"BRIAN_DB_PATH": brian_db},
+    }
+    
+    with open(config_path, "w") as f:
+        json.dump(cfg, f, indent=2)
+    
+    return {"tool": "cursor", "status": "connected", "config_path": str(config_path)}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { getApiBaseUrl } from '@/lib/backend'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -170,7 +171,7 @@ export function RegionEditDialog({
   // Fetch all available profiles
   const fetchProfiles = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/profiles')
+      const response = await fetch(getApiBaseUrl() + '/profiles')
       if (response.ok) {
         const data = await response.json()
         setProfiles(data.profiles || [])
@@ -183,7 +184,7 @@ export function RegionEditDialog({
   // Fetch profile templates
   const fetchTemplates = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/profiles/templates')
+      const response = await fetch(getApiBaseUrl() + '/profiles/templates')
       if (response.ok) {
         const data = await response.json()
         setTemplates(data.templates || [])
@@ -202,7 +203,7 @@ export function RegionEditDialog({
     
     setIsLoadingProfile(true)
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/regions/${region.id}/profile`)
+      const response = await fetch(`${getApiBaseUrl()}/regions/${region.id}/profile`)
       if (response.ok) {
         const data = await response.json()
         // Only set profile if it actually exists
@@ -230,7 +231,7 @@ export function RegionEditDialog({
   // Create profile from template
   const handleCreateFromTemplate = async (templateKey) => {
     try {
-      const response = await fetch('http://localhost:8080/api/v1/profiles/from-template', {
+      const response = await fetch(getApiBaseUrl() + '/profiles/from-template', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -257,7 +258,7 @@ export function RegionEditDialog({
     if (!newProfileName.trim()) return
     
     try {
-      const response = await fetch('http://localhost:8080/api/v1/profiles', {
+      const response = await fetch(getApiBaseUrl() + '/profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -289,7 +290,7 @@ export function RegionEditDialog({
     if (!region?.id) return
     
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/regions/${region.id}/profile`, {
+      const response = await fetch(`${getApiBaseUrl()}/regions/${region.id}/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ profile_id: profileId })
@@ -312,7 +313,7 @@ export function RegionEditDialog({
     if (!region?.id) return
     
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/regions/${region.id}/profile`, {
+      const response = await fetch(`${getApiBaseUrl()}/regions/${region.id}/profile`, {
         method: 'DELETE'
       })
       

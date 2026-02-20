@@ -24,6 +24,7 @@ import { useKnowledge } from '@/hooks/useKnowledge'
 import { ItemDetailSheet } from '@/components/ItemDetailSheet'
 import { useSettings } from '@/contexts/SettingsContext'
 import PixelBlast from '@/components/PixelBlast'
+import { getUserName } from '@/components/Onboarding'
 
 export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
   const { items, loadItems } = useKnowledge()
@@ -125,9 +126,15 @@ export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
           transition={{ delay: 0.2 }}
           className="mb-12 md:mb-16"
         >
-          <h1 className="text-5xl font-light mb-2">Welcome back</h1>
+          <h1 className="text-5xl font-light mb-2">
+            {items.length <= 1
+              ? `Welcome${getUserName() ? `, ${getUserName()}` : ''}`
+              : `Welcome back${getUserName() ? `, ${getUserName()}` : ''}`}
+          </h1>
           <p className="text-muted-foreground text-lg font-light">
-            Your knowledge universe at a glance
+            {items.length === 0
+              ? 'Start building your knowledge universe'
+              : 'Your knowledge universe at a glance'}
           </p>
         </motion.div>
 

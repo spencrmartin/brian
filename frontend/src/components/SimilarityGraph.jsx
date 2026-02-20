@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from "@/lib/backend"
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react'
 import * as d3 from 'd3'
 import { Badge } from '@/components/ui/badge'
@@ -539,7 +540,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
         setLoading(true)
         
         // Build URL - no project filter in universe mode to get cross-project connections
-        let url = 'http://localhost:8080/api/v1/similarity/connections?threshold=0.15&max_per_item=5'
+        let url = getApiBaseUrl() + '/similarity/connections?threshold=0.15&max_per_item=5'
         if (!universeMode && currentProject?.id) {
           url += `&project_id=${currentProject.id}`
         }
@@ -551,7 +552,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
         // In universe mode, also fetch all items across all projects
         if (universeMode) {
           try {
-            const itemsResponse = await fetch('http://localhost:8080/api/v1/items')
+            const itemsResponse = await fetch(getApiBaseUrl() + '/items')
             const allItemsData = await itemsResponse.json()
             setAllItems(allItemsData)
           } catch (err) {
@@ -603,7 +604,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
   // Fetch profile for a specific region
   const fetchProfileForRegion = useCallback(async (regionId) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/regions/${regionId}/profile`)
+      const response = await fetch(`${getApiBaseUrl()}/regions/${regionId}/profile`)
       if (response.ok) {
         const data = await response.json()
         if (data.profile) {
@@ -754,12 +755,12 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
           setLoading(true)
           
           // Fetch connections
-          const connectionsResponse = await fetch('http://localhost:8080/api/v1/similarity/connections?threshold=0.15&max_per_item=5')
+          const connectionsResponse = await fetch(getApiBaseUrl() + '/similarity/connections?threshold=0.15&max_per_item=5')
           const connectionsData = await connectionsResponse.json()
           setConnections(connectionsData)
           
           // Fetch all items
-          const itemsResponse = await fetch('http://localhost:8080/api/v1/items')
+          const itemsResponse = await fetch(getApiBaseUrl() + '/items')
           const allItemsData = await itemsResponse.json()
           console.log('[SimilarityGraph] Fetched all items:', allItemsData.length)
           setAllItems(allItemsData)

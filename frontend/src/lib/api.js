@@ -1,12 +1,11 @@
 /**
  * API Client for Brian Knowledge Base
  */
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
+import { getApiBaseUrl } from '@/lib/backend'
 
 class ApiClient {
   async request(endpoint, options = {}) {
-    const url = `${API_BASE_URL}${endpoint}`
+    const url = `${getApiBaseUrl()}${endpoint}`
     const config = {
       headers: {
         'Content-Type': 'application/json',
