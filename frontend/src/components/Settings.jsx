@@ -1,3 +1,4 @@
+import { getApiBaseUrl } from "@/lib/backend"
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -96,7 +97,7 @@ export function Settings({ items = [], onImport }) {
   const handleClearData = async () => {
     // This would call the API to clear all data
     try {
-      const response = await fetch('http://localhost:8080/api/v1/items/all', {
+      const response = await fetch(getApiBaseUrl() + '/items/all', {
         method: 'DELETE'
       })
       if (response.ok) {

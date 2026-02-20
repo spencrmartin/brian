@@ -1,12 +1,11 @@
 /**
  * API Client for brian backend
  */
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8080/api/v1'
+import { getApiBaseUrl } from '@/lib/backend'
 
 class BrianAPI {
   async request(endpoint, options = {}) {
-    const url = `${API_BASE}${endpoint}`
+    const url = `${getApiBaseUrl()}${endpoint}`
     const config = {
       headers: {
         'Content-Type': 'application/json',

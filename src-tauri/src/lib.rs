@@ -7,6 +7,19 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 /// Holds the sidecar child process so we can kill it on app exit.
 struct SidecarChild(Mutex<Option<CommandChild>>);
 
+/// Read the backend port from ~/.brian/port file.
+/// Falls back to 8080 if the file doesn't exist or can't be read.
+fn read_backend_port() -> u16 {
+    let port_file = dirs::home_dir()
+        .map(|h| h.join(".brian").join("port"))
+        .unwrap_or_default();
+
+    std::fs::read_to_string(&port_file)
+        .ok()
+        .and_then(|s| s.trim().parse::<u16>().ok())
+        .unwrap_or(8080)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -76,19 +89,27 @@ pub fn run() {
             });
 
             // ── Health-check: poll /health until the backend is ready ──
+            // Wait a moment for the sidecar to write the port file, then read it.
             let health_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 const MAX_RETRIES: u32 = 30;
                 const RETRY_DELAY: std::time::Duration = std::time::Duration::from_secs(1);
                 let client = reqwest::Client::new();
-                let url = "http://127.0.0.1:8080/health";
+
+                // Give the sidecar a moment to start and write the port file
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
+                let port = read_backend_port();
+                let url = format!("http://127.0.0.1:{}/health", port);
+                log::info!("Health checking backend on port {} (from port file)…", port);
 
                 for attempt in 1..=MAX_RETRIES {
                     log::info!("Health check attempt {}/{}…", attempt, MAX_RETRIES);
-                    match client.get(url).send().await {
+                    match client.get(&url).send().await {
                         Ok(resp) if resp.status().is_success() => {
-                            log::info!("brian-backend is healthy (attempt {})", attempt);
-                            let _ = health_handle.emit("backend-ready", true);
+                            log::info!("brian-backend is healthy on port {} (attempt {})", port, attempt);
+                            // Emit the port along with the ready event so frontend knows where to connect
+                            let _ = health_handle.emit("backend-ready", port);
                             return;
                         }
                         Ok(resp) => {
@@ -102,6 +123,12 @@ pub fn run() {
                         }
                     }
                     tokio::time::sleep(RETRY_DELAY).await;
+
+                    // Re-read port file on each retry in case it wasn't written yet
+                    let new_port = read_backend_port();
+                    if new_port != port {
+                        log::info!("Port file updated: {} → {}", port, new_port);
+                    }
                 }
 
                 log::error!(
