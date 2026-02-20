@@ -57,3 +57,12 @@ htmlcov/
 start.sh
 stop.sh
 *.pid
+
+# Tauri build artifacts
+src-tauri/target/
+src-tauri/binaries/
+src-tauri/gen/
+
+# Frontend build output
+frontend/dist/
+frontend/node_modules/
