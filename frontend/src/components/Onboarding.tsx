@@ -67,7 +67,7 @@ function LoginStep({ onNext }: { onNext: (name: string) => void }) {
     >
       <BrianLogo size={22} gap={3} />
 
-      <p className="text-sm text-white/35 font-light tracking-wide">
+      <p className="text-sm text-muted-foreground font-light tracking-wide">
         Keep your knowledge local
       </p>
 
@@ -78,13 +78,13 @@ function LoginStep({ onNext }: { onNext: (name: string) => void }) {
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoFocus
-          className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/8 text-white/90 text-sm placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
+          className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 transition-colors"
         />
 
         <button
           type="submit"
           disabled={!name.trim()}
-          className="self-end px-8 py-3 rounded-xl bg-white/10 hover:bg-white/15 text-white/80 text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-white/20 disabled:opacity-20 disabled:cursor-not-allowed"
+          className="self-end px-8 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-20 disabled:cursor-not-allowed"
         >
           Log in
         </button>
@@ -106,10 +106,10 @@ function WelcomeStep({ name, onNext }: { name: string; onNext: () => void }) {
       <BrianLogo size={20} gap={3} />
 
       <div className="flex flex-col gap-3">
-        <h1 className="text-3xl font-light text-white/90">
+        <h1 className="text-3xl font-light text-foreground">
           Hey {name}, this is Brian
         </h1>
-        <p className="text-base text-white/40 font-light leading-relaxed">
+        <p className="text-base text-muted-foreground font-light leading-relaxed">
           Your personal knowledge base. Save notes, links, code snippets, and
           papers — then search and connect them with AI.
         </p>
@@ -117,7 +117,7 @@ function WelcomeStep({ name, onNext }: { name: string; onNext: () => void }) {
 
       <button
         onClick={onNext}
-        className="self-end px-8 py-3 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-white/20"
+        className="self-end px-8 py-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring"
       >
         Get Started
       </button>
@@ -212,10 +212,10 @@ function ConnectToolsStep({
       className="flex flex-col items-center gap-8 max-w-md text-center"
     >
       <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-light text-white/90">
+        <h2 className="text-2xl font-light text-foreground">
           Connect Your AI Tools
         </h2>
-        <p className="text-sm text-white/40 font-light">
+        <p className="text-sm text-muted-foreground font-light">
           Brian works as an MCP server — connect it to your favourite AI
           assistant so it can search your knowledge base.
         </p>
@@ -233,26 +233,26 @@ function ConnectToolsStep({
               disabled={isConnecting}
               className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left ${
                 isConnected
-                  ? 'border-white/20 bg-white/[0.06]'
-                  : 'border-white/8 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/12'
+                  ? 'border-border bg-muted/50'
+                  : 'border-border/50 bg-card hover:bg-muted/50 hover:border-border'
               }`}
             >
-              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/[0.06] text-white/70 text-xl shrink-0">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted text-foreground/70 text-xl shrink-0">
                 {tool.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white/80">{tool.name}</p>
-                <p className="text-xs text-white/35">{tool.description}</p>
+                <p className="text-sm font-medium text-foreground">{tool.name}</p>
+                <p className="text-xs text-muted-foreground">{tool.description}</p>
               </div>
               <div className="shrink-0">
                 {isConnected ? (
-                  <svg className="w-5 h-5 text-white/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <svg className="w-5 h-5 text-foreground/50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 ) : isConnecting ? (
-                  <div className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+                  <div className="w-4 h-4 border-2 border-border border-t-foreground/60 rounded-full animate-spin" />
                 ) : (
-                  <span className="text-xs text-white/30">Connect</span>
+                  <span className="text-xs text-muted-foreground">Connect</span>
                 )}
               </div>
             </button>
@@ -260,16 +260,20 @@ function ConnectToolsStep({
         })}
       </div>
 
+      {error && (
+        <p className="text-xs text-destructive">{error}</p>
+      )}
+
       <div className="flex gap-3 w-full">
         <button
           onClick={onSkip}
-          className="flex-1 px-6 py-2.5 rounded-lg text-white/40 text-sm font-medium hover:text-white/60 transition-colors"
+          className="flex-1 px-6 py-2.5 rounded-lg text-muted-foreground text-sm font-medium hover:text-foreground transition-colors"
         >
           Skip for now
         </button>
         <button
           onClick={onNext}
-          className="flex-1 px-6 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-white/20"
+          className="flex-1 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring"
         >
           Continue
         </button>
@@ -319,10 +323,10 @@ function AddFirstItemStep({ onComplete }: { onComplete: () => void }) {
       className="flex flex-col items-center gap-8 max-w-md text-center"
     >
       <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-light text-white/90">
+        <h2 className="text-2xl font-light text-foreground">
           Add Your First Note
         </h2>
-        <p className="text-sm text-white/40 font-light">
+        <p className="text-sm text-muted-foreground font-light">
           Save anything — a thought, a link, a code snippet. Brian will make it
           searchable and connected.
         </p>
@@ -336,26 +340,26 @@ function AddFirstItemStep({ onComplete }: { onComplete: () => void }) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             autoFocus
-            className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/8 text-white/90 text-sm placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
+            className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 transition-colors"
           />
           <textarea
             placeholder="Write something... (optional)"
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={4}
-            className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/8 text-white/90 text-sm placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors resize-none"
+            className="w-full px-4 py-3 rounded-xl bg-muted/50 border border-border text-foreground text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:border-foreground/30 transition-colors resize-none"
           />
           <div className="flex gap-3 mt-2">
             <button
               onClick={onComplete}
-              className="flex-1 px-6 py-2.5 rounded-lg text-white/40 text-sm font-medium hover:text-white/60 transition-colors"
+              className="flex-1 px-6 py-2.5 rounded-lg text-muted-foreground text-sm font-medium hover:text-foreground transition-colors"
             >
               Skip
             </button>
             <button
               onClick={handleSave}
               disabled={!title.trim() || saving}
-              className="flex-1 px-6 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 text-white/80 text-sm font-medium transition-colors focus:outline-none focus:ring-1 focus:ring-white/20 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium transition-colors hover:bg-primary/90 focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-30 disabled:cursor-not-allowed"
             >
               {saving ? 'Saving...' : 'Save & Finish'}
             </button>
@@ -367,10 +371,10 @@ function AddFirstItemStep({ onComplete }: { onComplete: () => void }) {
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center gap-3"
         >
-          <svg className="w-8 h-8 text-white/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg className="w-8 h-8 text-foreground/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
             <polyline points="20 6 9 17 4 12" />
           </svg>
-          <p className="text-sm text-white/50">Saved! Launching Brian...</p>
+          <p className="text-sm text-muted-foreground">Saved! Launching Brian...</p>
         </motion.div>
       )}
     </motion.div>
@@ -387,10 +391,10 @@ function StepDots({ total, current }: { total: number; current: number }) {
           key={i}
           className={`h-1 rounded-full transition-all duration-300 ${
             i === current
-              ? 'w-6 bg-white/50'
+              ? 'w-6 bg-foreground/50'
               : i < current
-                ? 'w-1.5 bg-white/25'
-                : 'w-1.5 bg-white/10'
+                ? 'w-1.5 bg-foreground/25'
+                : 'w-1.5 bg-foreground/10'
           }`}
         />
       ))}
@@ -416,7 +420,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-[#0a0a0a]">
+    <div className="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-background">
       <div className="flex-1 flex items-center justify-center px-6">
         <AnimatePresence mode="wait">
           {step === 0 && (
