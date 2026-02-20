@@ -7,7 +7,7 @@
     "frontendDist": "../frontend/dist",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "",
-    "beforeBuildCommand": "cd /Users/spencermartin/Desktop/brian/frontend && /opt/homebrew/bin/pnpm build"
+    "beforeBuildCommand": ""
   },
   "app": {
     "windows": [
