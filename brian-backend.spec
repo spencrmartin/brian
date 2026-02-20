@@ -257,6 +257,6 @@ exe = EXE(
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,       # Build for current architecture
-    codesign_identity=None,
+    codesign_identity='Developer ID Application: SPENCER ERNEST F MARTIN (8HGTQKQUPP)',
     entitlements_file=None,
 )
