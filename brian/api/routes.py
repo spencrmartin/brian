@@ -1224,7 +1224,7 @@ async def update_project_access(project_id: str):
 
 @router.get("/database/info")
 async def get_database_info():
-    """Get database info including schema version, path, and size"""
+    """Get database info including schema version, path, size, and FTS5 status"""
     if db is None:
         raise HTTPException(status_code=500, detail="Database not initialized")
     
@@ -1236,6 +1236,8 @@ async def get_database_info():
         "path": db.db_path,
         "size_mb": size_mb,
         "schema_version": db.get_schema_version(),
+        "sqlite_version": db.get_sqlite_version(),
+        "fts5_available": db.fts5_available(),
     }
 
 

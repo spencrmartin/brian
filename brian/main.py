@@ -71,8 +71,12 @@ def create_app(config: Config = None) -> FastAPI:
     async def health():
         """Health check endpoint"""
         schema_version = None
+        sqlite_version = None
+        fts5 = None
         try:
             schema_version = db.get_schema_version()
+            sqlite_version = db.get_sqlite_version()
+            fts5 = db.fts5_available()
         except Exception:
             pass
         return {
@@ -80,6 +84,8 @@ def create_app(config: Config = None) -> FastAPI:
             "app": config.APP_NAME,
             "version": config.APP_VERSION,
             "schema_version": schema_version,
+            "sqlite_version": sqlite_version,
+            "fts5_available": fts5,
             "port": config.API_PORT,
         }
     

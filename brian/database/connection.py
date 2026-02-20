@@ -100,6 +100,25 @@ class Database:
         result = cursor.fetchone()
         return result[0] if result else 0
 
+    def get_sqlite_version(self) -> str:
+        """Return the SQLite library version."""
+        conn = self.connect()
+        cursor = conn.cursor()
+        cursor.execute("SELECT sqlite_version()")
+        return cursor.fetchone()[0]
+
+    def fts5_available(self) -> bool:
+        """Check if FTS5 is available in this SQLite build."""
+        try:
+            import sqlite3
+            conn = sqlite3.connect(":memory:")
+            conn.execute("CREATE VIRTUAL TABLE _fts5_test USING fts5(content)")
+            conn.execute("DROP TABLE _fts5_test")
+            conn.close()
+            return True
+        except Exception:
+            return False
+
     # ── Backup & Restore ─────────────────────────────────────────────────────
 
     def backup(self, reason: str = "manual") -> Optional[str]:
