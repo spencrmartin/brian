@@ -1,11 +1,42 @@
 """
 Similarity computation service for Brian
-Uses TF-IDF and cosine similarity to find related knowledge items
+
+Supports two backends:
+  - TF-IDF (default, zero dependencies) — keyword-based similarity
+  - Embeddings (optional, requires sentence-transformers) — semantic similarity
+
+Use create_similarity_service() to auto-select the best available backend.
 """
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 import re
 import math
+import os
 from collections import Counter, defaultdict
+
+
+def create_similarity_service(force_backend: Optional[str] = None) -> "SimilarityService":
+    """
+    Factory: create the best available similarity service.
+    
+    Args:
+        force_backend: "tfidf" or "embedding" to override auto-detection.
+                       Default (None) auto-selects embeddings if available.
+    
+    Returns:
+        SimilarityService instance (either TF-IDF or embedding-based)
+    """
+    backend = force_backend or os.environ.get("BRIAN_SIMILARITY_BACKEND", "auto")
+    
+    if backend == "embedding" or backend == "auto":
+        try:
+            return EmbeddingSimilarityService()
+        except ImportError:
+            if backend == "embedding":
+                raise
+            # auto mode: fall back to TF-IDF silently
+            pass
+    
+    return SimilarityService()
 
 
 class SimilarityService:
@@ -245,5 +276,184 @@ class SimilarityService:
                 similarities.append((item, round(similarity, 3)))
         
         # Sort by similarity and return top K
+        similarities.sort(key=lambda x: x[1], reverse=True)
+        return similarities[:top_k]
+
+
+class EmbeddingSimilarityService(SimilarityService):
+    """
+    Embedding-based similarity using sentence-transformers.
+    
+    Provides semantic similarity (understands meaning, not just keywords).
+    Falls back to TF-IDF methods if embeddings fail for any reason.
+    
+    Requires: pip install sentence-transformers
+    
+    The model is loaded lazily on first use and cached. Default model is
+    'all-MiniLM-L6-v2' (~80MB, fast, good quality). Override with
+    BRIAN_EMBEDDING_MODEL env var.
+    """
+    
+    DEFAULT_MODEL = "all-MiniLM-L6-v2"
+    
+    def __init__(self, model_name: Optional[str] = None):
+        super().__init__()
+        
+        # Import here so the class fails at construction time if not installed
+        from sentence_transformers import SentenceTransformer  # noqa: F401
+        
+        self._model_name = model_name or os.environ.get(
+            "BRIAN_EMBEDDING_MODEL", self.DEFAULT_MODEL
+        )
+        self._model = None  # Lazy-loaded
+        self._embeddings = []  # numpy array after build_index
+        self._items_cache = []  # items corresponding to embeddings
+    
+    @property
+    def model(self):
+        """Lazy-load the sentence transformer model."""
+        if self._model is None:
+            from sentence_transformers import SentenceTransformer
+            self._model = SentenceTransformer(self._model_name)
+        return self._model
+    
+    @staticmethod
+    def _item_to_text(item: Dict) -> str:
+        """Convert an item dict to a single text string for embedding."""
+        parts = [item.get('title', '')]
+        content = item.get('content', '')
+        # Limit content to first 1000 chars for embedding efficiency
+        if len(content) > 1000:
+            parts.append(content[:1000])
+        else:
+            parts.append(content)
+        tags = item.get('tags', [])
+        if tags:
+            parts.append(' '.join(tags))
+        return ' '.join(parts)
+    
+    def build_index(self, items: List[Dict]) -> None:
+        """Build embedding index for all items."""
+        import numpy as np
+        
+        # Also build TF-IDF index as fallback
+        super().build_index(items)
+        
+        self._items_cache = items
+        texts = [self._item_to_text(item) for item in items]
+        
+        if not texts:
+            self._embeddings = np.array([])
+            return
+        
+        # Encode all texts in one batch (much faster than one-by-one)
+        self._embeddings = self.model.encode(
+            texts,
+            show_progress_bar=False,
+            normalize_embeddings=True,  # Pre-normalize for fast cosine sim
+        )
+    
+    def _embedding_cosine_similarity(self, idx1: int, idx2: int) -> float:
+        """Fast cosine similarity between two pre-normalized embeddings."""
+        import numpy as np
+        if len(self._embeddings) == 0:
+            return 0.0
+        # Dot product of normalized vectors = cosine similarity
+        return float(np.dot(self._embeddings[idx1], self._embeddings[idx2]))
+    
+    def _embedding_similarity_to_text(self, text: str, idx: int) -> float:
+        """Cosine similarity between a query text and an indexed item."""
+        import numpy as np
+        if len(self._embeddings) == 0:
+            return 0.0
+        query_embedding = self.model.encode(
+            [text], show_progress_bar=False, normalize_embeddings=True
+        )[0]
+        return float(np.dot(query_embedding, self._embeddings[idx]))
+    
+    def find_similar_items(
+        self,
+        items: List[Dict],
+        threshold: float = 0.1,
+        max_connections_per_item: int = 5
+    ) -> List[Dict]:
+        """Find similar items using embedding similarity."""
+        if len(items) < 2:
+            return []
+        
+        self.build_index(items)
+        
+        connections = []
+        for i in range(len(items)):
+            item_connections = []
+            for j in range(i + 1, len(items)):
+                similarity = self._embedding_cosine_similarity(i, j)
+                if similarity >= threshold:
+                    item_connections.append({
+                        'source_item_id': items[i]['id'],
+                        'target_item_id': items[j]['id'],
+                        'similarity': round(similarity, 3),
+                        'connection_type': 'semantic_similarity'
+                    })
+            item_connections.sort(key=lambda x: x['similarity'], reverse=True)
+            connections.extend(item_connections[:max_connections_per_item])
+        
+        return connections
+    
+    def get_similarity_score(self, item1: Dict, item2: Dict) -> float:
+        """Get embedding similarity between two items."""
+        # If we have a pre-built index, try to find both items in it
+        if len(self._embeddings) > 0 and self._items_cache:
+            idx1 = next((i for i, it in enumerate(self._items_cache) if it['id'] == item1['id']), None)
+            idx2 = next((i for i, it in enumerate(self._items_cache) if it['id'] == item2['id']), None)
+            if idx1 is not None and idx2 is not None:
+                return self._embedding_cosine_similarity(idx1, idx2)
+        
+        # Fallback: encode both items on the fly
+        import numpy as np
+        texts = [self._item_to_text(item1), self._item_to_text(item2)]
+        embeddings = self.model.encode(texts, show_progress_bar=False, normalize_embeddings=True)
+        return float(np.dot(embeddings[0], embeddings[1]))
+    
+    def get_related_items(
+        self,
+        target_item: Dict,
+        all_items: List[Dict],
+        top_k: int = 5,
+        threshold: float = 0.1
+    ) -> List[Tuple[Dict, float]]:
+        """Find most similar items using embeddings."""
+        if not all_items:
+            return []
+        
+        self.build_index(all_items)
+        
+        # Find target in index
+        target_idx = next(
+            (i for i, item in enumerate(all_items) if item['id'] == target_item['id']),
+            None
+        )
+        
+        # If target not in index (e.g. a query pseudo-item), encode it separately
+        if target_idx is None:
+            import numpy as np
+            query_text = self._item_to_text(target_item)
+            query_emb = self.model.encode(
+                [query_text], show_progress_bar=False, normalize_embeddings=True
+            )[0]
+            similarities = []
+            for i, item in enumerate(all_items):
+                score = float(np.dot(query_emb, self._embeddings[i]))
+                if score >= threshold:
+                    similarities.append((item, round(score, 3)))
+        else:
+            similarities = []
+            for i, item in enumerate(all_items):
+                if i == target_idx:
+                    continue
+                score = self._embedding_cosine_similarity(target_idx, i)
+                if score >= threshold:
+                    similarities.append((item, round(score, 3)))
+        
         similarities.sort(key=lambda x: x[1], reverse=True)
         return similarities[:top_k]

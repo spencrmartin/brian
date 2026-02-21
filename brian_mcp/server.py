@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from brian.database.connection import Database
 from brian.database.repository import KnowledgeRepository, RegionRepository, RegionProfileRepository, ProjectRepository, ConnectionRepository
-from brian.services.similarity import SimilarityService
+from brian.services.similarity import SimilarityService, create_similarity_service
 from brian.services.link_preview import fetch_link_metadata, is_google_doc
 from brian.models.knowledge_item import KnowledgeItem, ItemType, Region, RegionType, RegionProfile, ContextStrategy, PROFILE_TEMPLATES, Project, DEFAULT_PROJECT_ID, Connection
 from brian.skills import list_available_skills, fetch_skill, skill_to_knowledge_item, SkillImportError
@@ -63,7 +63,7 @@ def init_services():
     profile_repo = RegionProfileRepository(db)
     project_repo = ProjectRepository(db)
     conn_repo = ConnectionRepository(db)
-    similarity_service = SimilarityService()
+    similarity_service = create_similarity_service()
 
 
 # Load HTML template for item view
