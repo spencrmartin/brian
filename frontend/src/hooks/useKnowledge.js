@@ -1,7 +1,7 @@
 /**
  * Custom hook for managing knowledge items
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '@/lib/api'
 import { useStore } from '@/store/useStore'
 
@@ -9,6 +9,7 @@ export function useKnowledge() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const initialLoadDone = useRef(false)
   
   // Get project filtering state from store
   const { currentProject, viewAllProjects } = useStore()
@@ -33,12 +34,14 @@ export function useKnowledge() {
         setItems(data)
         setError(null)
         setLoading(false)
+        initialLoadDone.current = true
         return // Success — exit
       } catch (err) {
         console.error(`Failed to load items (attempt ${attempt}/${MAX_RETRIES}):`, err)
         if (attempt === MAX_RETRIES) {
           setError(err)
           setLoading(false)
+          initialLoadDone.current = true
         } else {
           // Wait before retrying — backend port may still be resolving
           await new Promise(r => setTimeout(r, RETRY_DELAY))
@@ -47,10 +50,10 @@ export function useKnowledge() {
     }
   }, [currentProject?.id, viewAllProjects])
 
-  // Reload items when project filter changes
+  // Initial load and reload when project filter changes
   useEffect(() => {
     loadItems()
-  }, [loadItems])
+  }, [currentProject?.id, viewAllProjects])
 
   // Listen for custom reload events (e.g. after image upload in NewItemDialog)
   useEffect(() => {
