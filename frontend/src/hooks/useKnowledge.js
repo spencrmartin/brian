@@ -52,6 +52,13 @@ export function useKnowledge() {
     loadItems()
   }, [loadItems])
 
+  // Listen for custom reload events (e.g. after image upload in NewItemDialog)
+  useEffect(() => {
+    const handler = () => loadItems()
+    window.addEventListener('brian-items-changed', handler)
+    return () => window.removeEventListener('brian-items-changed', handler)
+  }, [loadItems])
+
   // Create new item
   const createItem = async (data) => {
     try {
