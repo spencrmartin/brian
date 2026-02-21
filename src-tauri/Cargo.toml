@@ -1,6 +1,6 @@
 [package]
 name = "brian"
-version = "0.1.1"
+version = "0.1.2"
 description = "Brian — Your personal knowledge base"
 authors = ["Spencer Martin"]
 license = "MIT"
