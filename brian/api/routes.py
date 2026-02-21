@@ -1266,6 +1266,25 @@ async def upload_image(
     return created.to_dict()
 
 
+@router.get("/images/{filename}")
+async def serve_image(filename: str):
+    """Serve an uploaded image from ~/.brian/images/ (legacy fallback for old items)."""
+    from pathlib import Path
+
+    images_dir = Path.home() / ".brian" / "images"
+    filepath = images_dir / filename
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    ext = filepath.suffix.lower()
+    media_types = {
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".png": "image/png", ".gif": "image/gif",
+        ".webp": "image/webp", ".svg": "image/svg+xml",
+    }
+    return FastAPIFileResponse(str(filepath), media_type=media_types.get(ext, "application/octet-stream"))
+
+
 # ── Database Management Endpoints ────────────────────────────────────────────
 
 @router.get("/database/info")

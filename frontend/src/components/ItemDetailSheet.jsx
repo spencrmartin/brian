@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { ProjectPill } from './ProjectPill'
 import { Highlight, themes } from 'prism-react-renderer'
 import MarkdownContent from './MarkdownContent'
+import { getApiBaseUrl } from '@/lib/backend'
 import { 
   Link as LinkIcon, 
   FileText, 
@@ -235,17 +236,25 @@ export function ItemDetailSheet({
               {item.title}
             </h3>
             
-            {/* Image items: show full-bleed image (base64 data URL stored in content) */}
-            {item.item_type === 'image' && (item.url || item.content) && (
-              <div className="mb-4 -mx-6 -mt-2">
-                <img 
-                  src={item.url || item.content}
-                  alt={item.title}
-                  className="w-full object-contain max-h-[60vh]"
-                  loading="lazy"
-                />
-              </div>
-            )}
+            {/* Image items: show full-bleed image */}
+            {item.item_type === 'image' && (item.url || item.content) && (() => {
+              const src = item.url || item.content
+              // Legacy items store /api/v1/images/... — resolve to full backend URL
+              const imgSrc = src.startsWith('/api/')
+                ? `${(typeof getApiBaseUrl === 'function' ? getApiBaseUrl() : '').replace('/api/v1', '')}${src}`
+                : src
+              return (
+                <div className="mb-4 -mx-6 -mt-2">
+                  <img 
+                    src={imgSrc}
+                    alt={item.title}
+                    className="w-full object-contain max-h-[60vh]"
+                    loading="lazy"
+                    onError={(e) => { e.target.style.display = 'none' }}
+                  />
+                </div>
+              )
+            })()}
 
             {/* Link items with URL: show iframe preview */}
             {isLinkWithUrl && !iframeError ? (

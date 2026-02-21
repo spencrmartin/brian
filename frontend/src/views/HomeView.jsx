@@ -20,6 +20,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react'
 import { truncateTitle } from '@/lib/utils'
+import { getApiBaseUrl } from '@/lib/backend'
 import ContentPreview from '@/components/ContentPreview'
 import { ItemDetailSheet } from '@/components/ItemDetailSheet'
 import { useSettings } from '@/contexts/SettingsContext'
@@ -119,12 +120,16 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
     return <Icon className="w-6 h-6" />
   }
 
-  // Resolve image source — stored as base64 data URL in content/url
+  // Resolve image source — base64 data URL or legacy /api/v1/images/ path
   const resolveImageUrl = (item) => {
     if (item.item_type !== 'image') return null
     const src = item.url || item.content
     if (!src) return null
-    return src  // Already a data:image/...;base64,... URL
+    // Legacy items store /api/v1/images/... — need full backend URL
+    if (src.startsWith('/api/')) {
+      return `${getApiBaseUrl().replace('/api/v1', '')}${src}`
+    }
+    return src  // data:image/...;base64,... or full URL
   }
 
   // Simple graph preview data
@@ -417,6 +422,7 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
                                   className="w-full h-full object-cover"
                                   style={{ maxHeight: '300px' }}
                                   loading="lazy"
+                                  onError={(e) => { e.target.style.display = 'none' }}
                                 />
                                 {/* Gradient overlay at bottom for text */}
                                 <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent" />
