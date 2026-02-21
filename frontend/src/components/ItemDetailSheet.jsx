@@ -231,24 +231,25 @@ export function ItemDetailSheet({
           
           {/* Content - Scrollable */}
           <div className="px-6 py-6 overflow-y-auto flex-1">
-            {/* Title */}
-            <h3 className="font-normal text-xl mb-4 leading-snug">
-              {item.title}
-            </h3>
+            {/* Title (hidden for image items) */}
+            {item.item_type !== 'image' && (
+              <h3 className="font-normal text-xl mb-4 leading-snug">
+                {item.title}
+              </h3>
+            )}
             
-            {/* Image items: show full-bleed image */}
+            {/* Image items: just the photo, nothing else */}
             {item.item_type === 'image' && (item.url || item.content) && (() => {
               const src = item.url || item.content
-              // Legacy items store /api/v1/images/... — resolve to full backend URL
               const imgSrc = src.startsWith('/api/')
-                ? `${(typeof getApiBaseUrl === 'function' ? getApiBaseUrl() : '').replace('/api/v1', '')}${src}`
+                ? `${getApiBaseUrl().replace('/api/v1', '')}${src}`
                 : src
               return (
-                <div className="mb-4 -mx-6 -mt-2">
+                <div className="-mx-6 -mt-6">
                   <img 
                     src={imgSrc}
                     alt={item.title}
-                    className="w-full object-contain max-h-[60vh]"
+                    className="w-full object-contain"
                     loading="lazy"
                     onError={(e) => { e.target.style.display = 'none' }}
                   />

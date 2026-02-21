@@ -406,7 +406,7 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
                       {dateItems.map((item) => {
                         const imageUrl = resolveImageUrl(item)
                         
-                        // Image items get a special full-bleed card
+                        // Image items: just the photo, nothing else
                         if (imageUrl) {
                           return (
                             <Card 
@@ -414,34 +414,14 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
                               className="relative overflow-hidden border-border/50 hover:shadow-2xl transition-all duration-300 rounded-3xl cursor-pointer group"
                               onClick={() => openItemDetail(item)}
                             >
-                              {/* Full-bleed image */}
-                              <div className="relative w-full" style={{ minHeight: '200px' }}>
-                                <img 
-                                  src={imageUrl} 
-                                  alt={item.title}
-                                  className="w-full h-full object-cover"
-                                  style={{ maxHeight: '300px' }}
-                                  loading="lazy"
-                                  onError={(e) => { e.target.style.display = 'none' }}
-                                />
-                                {/* Gradient overlay at bottom for text */}
-                                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/70 to-transparent" />
-                                {/* Title overlay */}
-                                <div className="absolute bottom-0 left-0 right-0 p-4">
-                                  <h4 className="text-white text-lg font-light line-clamp-2 leading-snug drop-shadow-lg">
-                                    {truncateTitle(item.title, 70)}
-                                  </h4>
-                                  {item.tags && item.tags.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                      {item.tags.slice(0, 3).map((tag, index) => (
-                                        <Badge key={index} className="text-[10px] bg-white/20 text-white border-white/30 backdrop-blur-sm">
-                                          {tag}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
+                              <img 
+                                src={imageUrl} 
+                                alt={item.title}
+                                className="w-full object-cover"
+                                style={{ minHeight: '200px', maxHeight: '300px' }}
+                                loading="lazy"
+                                onError={(e) => { e.target.style.display = 'none' }}
+                              />
                             </Card>
                           )
                         }
