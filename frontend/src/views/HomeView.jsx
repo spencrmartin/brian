@@ -20,14 +20,12 @@ import {
 } from 'lucide-react'
 import { truncateTitle } from '@/lib/utils'
 import ContentPreview from '@/components/ContentPreview'
-import { useKnowledge } from '@/hooks/useKnowledge'
 import { ItemDetailSheet } from '@/components/ItemDetailSheet'
 import { useSettings } from '@/contexts/SettingsContext'
 import PixelBlast from '@/components/PixelBlast'
 import { getUserName } from '@/components/Onboarding'
 
-export default function HomeView({ onEdit, onDelete, onToggleFavorite }) {
-  const { items, loadItems } = useKnowledge()
+export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleFavorite }) {
   const { accentColor, temperatureUnit } = useSettings()
   const [weather, setWeather] = useState(null)
   const [loadingWeather, setLoadingWeather] = useState(true)
