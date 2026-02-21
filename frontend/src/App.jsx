@@ -192,6 +192,8 @@ function App() {
         {/* Home View - Dashboard with Frosted Cards */}
         {!loading && !error && selectedView === 'home' && (
           <HomeView 
+            items={items}
+            loadItems={loadItems}
             onEdit={handleEdit}
             onDelete={handleDelete}
             onToggleFavorite={toggleFavorite}
