@@ -235,11 +235,11 @@ export function ItemDetailSheet({
               {item.title}
             </h3>
             
-            {/* Image items: show full-bleed image */}
-            {item.item_type === 'image' && item.url && (
+            {/* Image items: show full-bleed image (base64 data URL stored in content) */}
+            {item.item_type === 'image' && (item.url || item.content) && (
               <div className="mb-4 -mx-6 -mt-2">
                 <img 
-                  src={item.url.startsWith('/api/') ? `${window.__BRIAN_BACKEND_URL || 'http://127.0.0.1:8080'}${item.url}` : item.url}
+                  src={item.url || item.content}
                   alt={item.title}
                   className="w-full object-contain max-h-[60vh]"
                   loading="lazy"
@@ -405,8 +405,8 @@ export function ItemDetailSheet({
               </div>
             )}
             
-            {/* URL */}
-            {item.url && (
+            {/* URL (hide for image items since it's a data URL) */}
+            {item.url && item.item_type !== 'image' && (
               <a
                 href={item.url}
                 target="_blank"

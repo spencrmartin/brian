@@ -20,7 +20,6 @@ import {
   Image as ImageIcon
 } from 'lucide-react'
 import { truncateTitle } from '@/lib/utils'
-import { getBackendUrl } from '@/lib/backend'
 import ContentPreview from '@/components/ContentPreview'
 import { ItemDetailSheet } from '@/components/ItemDetailSheet'
 import { useSettings } from '@/contexts/SettingsContext'
@@ -120,15 +119,12 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
     return <Icon className="w-6 h-6" />
   }
 
-  // Helper to resolve image URLs (backend serves from /api/v1/images/)
+  // Resolve image source — stored as base64 data URL in content/url
   const resolveImageUrl = (item) => {
     if (item.item_type !== 'image') return null
-    const url = item.url || item.content
-    if (!url) return null
-    if (url.startsWith('/api/')) {
-      return `${getBackendUrl()}${url}`
-    }
-    return url
+    const src = item.url || item.content
+    if (!src) return null
+    return src  // Already a data:image/...;base64,... URL
   }
 
   // Simple graph preview data

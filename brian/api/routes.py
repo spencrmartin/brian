@@ -1223,16 +1223,6 @@ async def update_project_access(project_id: str):
 
 # ── Image Upload Endpoints ───────────────────────────────────────────────────
 
-IMAGES_DIR = None  # Set lazily
-
-def _get_images_dir():
-    global IMAGES_DIR
-    if IMAGES_DIR is None:
-        from pathlib import Path
-        IMAGES_DIR = Path.home() / ".brian" / "images"
-        IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-    return IMAGES_DIR
-
 
 @router.post("/upload/image", response_model=dict, status_code=201)
 async def upload_image(
@@ -1241,9 +1231,8 @@ async def upload_image(
     tags: str = Form(""),
     project_id: str = Form(""),
 ):
-    """Upload an image and create an image knowledge item."""
-    import uuid as _uuid
-    from pathlib import Path
+    """Upload an image and store it as a base64 data URL in the database."""
+    import base64
 
     repo, _, _, _, _, project_repo = get_repositories()
 
@@ -1252,19 +1241,10 @@ async def upload_image(
     if file.content_type not in allowed:
         raise HTTPException(status_code=400, detail=f"Unsupported image type: {file.content_type}")
 
-    # Save file
-    images_dir = _get_images_dir()
-    ext = file.filename.rsplit(".", 1)[-1] if "." in (file.filename or "") else "jpg"
-    image_id = str(_uuid.uuid4())
-    filename = f"{image_id}.{ext}"
-    filepath = images_dir / filename
-
+    # Read file and encode as base64 data URL
     contents = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(contents)
-
-    # Build image URL (served by /images/<filename>)
-    image_url = f"/api/v1/images/{filename}"
+    b64 = base64.b64encode(contents).decode("utf-8")
+    data_url = f"data:{file.content_type};base64,{b64}"
 
     # Resolve project
     pid = project_id if project_id else None
@@ -1272,39 +1252,18 @@ async def upload_image(
         default_project = project_repo.get_default()
         pid = default_project.id if default_project else None
 
-    # Create knowledge item
+    # Create knowledge item — image stored directly in content as data URL
     tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
     item = KnowledgeItem(
         title=title or file.filename or "Untitled Image",
-        content=image_url,  # Store the serve path as content
+        content=data_url,
         item_type=ItemType.IMAGE,
-        url=image_url,
+        url=data_url,
         tags=tag_list,
         project_id=pid,
     )
     created = repo.create(item)
     return created.to_dict()
-
-
-@router.get("/images/{filename}")
-async def serve_image(filename: str):
-    """Serve an uploaded image from ~/.brian/images/"""
-    from pathlib import Path
-
-    filepath = _get_images_dir() / filename
-    if not filepath.exists():
-        raise HTTPException(status_code=404, detail="Image not found")
-
-    # Determine media type
-    ext = filepath.suffix.lower()
-    media_types = {
-        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-        ".png": "image/png", ".gif": "image/gif",
-        ".webp": "image/webp", ".svg": "image/svg+xml",
-    }
-    media_type = media_types.get(ext, "application/octet-stream")
-
-    return FastAPIFileResponse(str(filepath), media_type=media_type)
 
 
 # ── Database Management Endpoints ────────────────────────────────────────────
