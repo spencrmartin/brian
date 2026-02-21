@@ -835,6 +835,39 @@ For simple web links without document content:
                 }
             }
         ),
+        # Image upload tool
+        Tool(
+            name="upload_image",
+            description="Upload an image to the knowledge base. Accepts a base64-encoded image and creates an image item. The image is stored directly in the database.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "image_data": {
+                        "type": "string",
+                        "description": "Base64-encoded image data (without the data:image/...;base64, prefix)"
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Title/caption for the image"
+                    },
+                    "media_type": {
+                        "type": "string",
+                        "description": "MIME type of the image (e.g. 'image/png', 'image/jpeg')",
+                        "default": "image/png"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Optional tags for categorization"
+                    },
+                    "project_id": {
+                        "type": "string",
+                        "description": "Optional project ID (uses default project if not specified)"
+                    }
+                },
+                "required": ["image_data", "title"]
+            }
+        ),
         # Connections tools
         Tool(
             name="create_connection",
@@ -2135,6 +2168,63 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
                 "tags": item.tags,
                 "url": item.url
             } for item in items]
+        }
+        
+        return [TextContent(
+            type="text",
+            text=json.dumps(response, indent=2)
+        )]
+
+    elif name == "upload_image":
+        import base64 as _b64
+        
+        image_data = arguments["image_data"]
+        title = arguments["title"]
+        media_type = arguments.get("media_type", "image/png")
+        tags = arguments.get("tags", [])
+        project_id = arguments.get("project_id")
+        
+        # Build data URL from base64
+        # Strip prefix if caller accidentally included it
+        if image_data.startswith("data:"):
+            data_url = image_data
+        else:
+            data_url = f"data:{media_type};base64,{image_data}"
+        
+        # Validate base64 is decodable
+        try:
+            raw = image_data.split(",")[-1] if "," in image_data else image_data
+            _b64.b64decode(raw)
+        except Exception:
+            return [TextContent(
+                type="text",
+                text=json.dumps({"error": "Invalid base64 image data"})
+            )]
+        
+        # Resolve project
+        if not project_id:
+            default_project = project_repo.get_default()
+            if default_project:
+                project_id = default_project.id
+        
+        item = KnowledgeItem(
+            title=title,
+            content=data_url,
+            item_type=ItemType.IMAGE,
+            url=data_url,
+            tags=tags,
+            project_id=project_id,
+        )
+        created_item = repo.create(item)
+        
+        response = {
+            "success": True,
+            "item_id": created_item.id,
+            "title": created_item.title,
+            "type": "image",
+            "tags": created_item.tags,
+            "created_at": created_item.created_at.isoformat() if created_item.created_at else None,
+            "message": f"Image '{title}' uploaded and stored in knowledge base"
         }
         
         return [TextContent(
