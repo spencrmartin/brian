@@ -372,6 +372,11 @@ For simple web links without document content:
                         "type": "integer",
                         "description": "Maximum number of items to return",
                         "default": 5
+                    },
+                    "max_content_length": {
+                        "type": "integer",
+                        "description": "Maximum characters of content to include per item. 0 or null for full content (default: full content)",
+                        "default": 0
                     }
                 },
                 "required": ["topic"]
@@ -1207,6 +1212,13 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
     elif name == "get_knowledge_context":
         topic = arguments["topic"]
         limit = arguments.get("limit", 5)
+        max_content_length = arguments.get("max_content_length", 0)
+        
+        def _truncate_content(content: str) -> str:
+            """Truncate content if max_content_length is set, otherwise return full content."""
+            if max_content_length and max_content_length > 0 and len(content) > max_content_length:
+                return content[:max_content_length] + "..."
+            return content
         
         # Search for the topic
         results = repo.search(topic)
@@ -1232,7 +1244,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
                 context_items.append({
                     "id": item.id,
                     "title": item.title,
-                    "content": item.content[:300] + "..." if len(item.content) > 300 else item.content,
+                    "content": _truncate_content(item.content),
                     "type": str(item.item_type.value) if hasattr(item.item_type, 'value') else str(item.item_type),
                     "tags": item.tags,
                     "relevance": "direct_match"
@@ -1258,7 +1270,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
                                 context_items.append({
                                     "id": full_item.id,
                                     "title": full_item.title,
-                                    "content": full_item.content[:300] + "..." if len(full_item.content) > 300 else full_item.content,
+                                    "content": _truncate_content(full_item.content),
                                     "type": str(full_item.item_type.value) if hasattr(full_item.item_type, 'value') else str(full_item.item_type),
                                     "tags": full_item.tags,
                                     "relevance": "similar",
@@ -2118,7 +2130,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             "items": [{
                 "id": item.id,
                 "title": item.title,
-                "content": item.content[:300] + "..." if len(item.content) > 300 else item.content,
+                "content": item.content,
                 "type": str(item.item_type.value) if hasattr(item.item_type, 'value') else str(item.item_type),
                 "tags": item.tags,
                 "url": item.url
