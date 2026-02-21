@@ -13,6 +13,9 @@ export function useKnowledge() {
   
   // Get project filtering state from store
   const { currentProject, viewAllProjects } = useStore()
+  
+  // Create stable project ID value (null instead of undefined)
+  const projectId = currentProject?.id || null
 
   // Load all items with project filtering (auto-retries on failure)
   const loadItems = useCallback(async (params = {}) => {
@@ -26,8 +29,8 @@ export function useKnowledge() {
       try {
         // Apply project filter if not viewing all projects
         const queryParams = { ...params }
-        if (currentProject?.id && !viewAllProjects) {
-          queryParams.project_id = currentProject.id
+        if (projectId && !viewAllProjects) {
+          queryParams.project_id = projectId
         }
         
         const data = await api.getItems(queryParams)
@@ -48,12 +51,12 @@ export function useKnowledge() {
         }
       }
     }
-  }, [currentProject?.id, viewAllProjects])
+  }, [projectId, viewAllProjects])
 
   // Initial load and reload when project filter changes
   useEffect(() => {
     loadItems()
-  }, [currentProject?.id, viewAllProjects])
+  }, [projectId, viewAllProjects])
 
   // Listen for custom reload events (e.g. after image upload in NewItemDialog)
   useEffect(() => {
