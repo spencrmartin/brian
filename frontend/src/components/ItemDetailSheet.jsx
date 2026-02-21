@@ -235,6 +235,18 @@ export function ItemDetailSheet({
               {item.title}
             </h3>
             
+            {/* Image items: show full-bleed image */}
+            {item.item_type === 'image' && item.url && (
+              <div className="mb-4 -mx-6 -mt-2">
+                <img 
+                  src={item.url.startsWith('/api/') ? `${window.__BRIAN_BACKEND_URL || 'http://127.0.0.1:8080'}${item.url}` : item.url}
+                  alt={item.title}
+                  className="w-full object-contain max-h-[60vh]"
+                  loading="lazy"
+                />
+              </div>
+            )}
+
             {/* Link items with URL: show iframe preview */}
             {isLinkWithUrl && !iframeError ? (
               <div className="mb-4">

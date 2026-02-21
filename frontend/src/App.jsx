@@ -21,8 +21,10 @@ import {
   Settings as SettingsIcon, 
   Network,
   Search,
-  Home
+  Home,
+  ImagePlus
 } from 'lucide-react'
+import { getApiBaseUrl } from '@/lib/backend'
 import './App.css'
 
 function App() {
@@ -153,6 +155,45 @@ function App() {
           </Button>
           <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
             New Item
+          </div>
+        </div>
+
+        {/* Upload Photo Button */}
+        <div className="group relative">
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            id="photo-upload-input"
+            onChange={async (e) => {
+              const file = e.target.files?.[0]
+              if (!file) return
+              const formData = new FormData()
+              formData.append('file', file)
+              formData.append('title', file.name.replace(/\.[^/.]+$/, ''))
+              try {
+                const res = await fetch(`${getApiBaseUrl()}/upload/image`, {
+                  method: 'POST',
+                  body: formData,
+                })
+                if (res.ok) {
+                  loadItems()
+                }
+              } catch (err) {
+                console.error('Upload failed:', err)
+              }
+              e.target.value = ''
+            }}
+          />
+          <Button 
+            size="icon"
+            className="h-12 w-12 rounded-full shadow-lg"
+            onClick={() => document.getElementById('photo-upload-input')?.click()}
+          >
+            <ImagePlus className="w-5 h-5" />
+          </Button>
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-black text-white text-sm rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+            Upload Photo
           </div>
         </div>
 

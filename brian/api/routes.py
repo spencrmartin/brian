@@ -1,7 +1,8 @@
 """
 API routes for brian
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form
+from fastapi.responses import FileResponse as FastAPIFileResponse
 from typing import List, Optional
 from datetime import datetime
 
@@ -1218,6 +1219,92 @@ async def update_project_access(project_id: str):
     # Return updated project
     updated = project_repo.get_by_id(project_id)
     return updated.to_dict()
+
+
+# ── Image Upload Endpoints ───────────────────────────────────────────────────
+
+IMAGES_DIR = None  # Set lazily
+
+def _get_images_dir():
+    global IMAGES_DIR
+    if IMAGES_DIR is None:
+        from pathlib import Path
+        IMAGES_DIR = Path.home() / ".brian" / "images"
+        IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+    return IMAGES_DIR
+
+
+@router.post("/upload/image", response_model=dict, status_code=201)
+async def upload_image(
+    file: UploadFile = File(...),
+    title: str = Form(""),
+    tags: str = Form(""),
+    project_id: str = Form(""),
+):
+    """Upload an image and create an image knowledge item."""
+    import uuid as _uuid
+    from pathlib import Path
+
+    repo, _, _, _, _, project_repo = get_repositories()
+
+    # Validate file type
+    allowed = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"}
+    if file.content_type not in allowed:
+        raise HTTPException(status_code=400, detail=f"Unsupported image type: {file.content_type}")
+
+    # Save file
+    images_dir = _get_images_dir()
+    ext = file.filename.rsplit(".", 1)[-1] if "." in (file.filename or "") else "jpg"
+    image_id = str(_uuid.uuid4())
+    filename = f"{image_id}.{ext}"
+    filepath = images_dir / filename
+
+    contents = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(contents)
+
+    # Build image URL (served by /images/<filename>)
+    image_url = f"/api/v1/images/{filename}"
+
+    # Resolve project
+    pid = project_id if project_id else None
+    if not pid:
+        default_project = project_repo.get_default()
+        pid = default_project.id if default_project else None
+
+    # Create knowledge item
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
+    item = KnowledgeItem(
+        title=title or file.filename or "Untitled Image",
+        content=image_url,  # Store the serve path as content
+        item_type=ItemType.IMAGE,
+        url=image_url,
+        tags=tag_list,
+        project_id=pid,
+    )
+    created = repo.create(item)
+    return created.to_dict()
+
+
+@router.get("/images/{filename}")
+async def serve_image(filename: str):
+    """Serve an uploaded image from ~/.brian/images/"""
+    from pathlib import Path
+
+    filepath = _get_images_dir() / filename
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    # Determine media type
+    ext = filepath.suffix.lower()
+    media_types = {
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".png": "image/png", ".gif": "image/gif",
+        ".webp": "image/webp", ".svg": "image/svg+xml",
+    }
+    media_type = media_types.get(ext, "application/octet-stream")
+
+    return FastAPIFileResponse(str(filepath), media_type=media_type)
 
 
 # ── Database Management Endpoints ────────────────────────────────────────────
