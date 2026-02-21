@@ -63,9 +63,10 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
   }, [])
 
   useEffect(() => {
-    loadItems()
+    // Only fetch weather on mount - items are already loaded by App.jsx
     fetchWeather()
-  }, [loadItems])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const fetchWeather = async () => {
     try {

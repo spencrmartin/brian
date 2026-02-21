@@ -10,6 +10,8 @@ import { ProjectSelector } from '@/components/ProjectSelector'
 import { SimilarityGraph } from '@/components/SimilarityGraph'
 import { Settings } from '@/components/Settings'
 import HomeView from '@/views/HomeView'
+import PixelBlast from '@/components/PixelBlast'
+import { useSettings } from '@/contexts/SettingsContext'
 import {
   Dialog,
   DialogContent,
@@ -37,6 +39,9 @@ function App() {
     searchItems,
     loadItems,
   } = useKnowledge()
+
+  // Get accent color from settings for loading animation
+  const { accentColor } = useSettings()
 
   // Deep linking: sync view state with URL hash
   const { view: selectedView, initialItemId, navigate } = useDeepLink()
@@ -178,11 +183,20 @@ function App() {
 
       {/* Main Content */}
       <main className={selectedView === 'graph' ? '' : 'container mx-auto px-4 py-6 pl-24 pb-32 md:pl-4 md:pb-6'}>
-        {/* Loading State */}
+        {/* Loading State - Full Screen PixelBlast Animation */}
         {loading && (
-          <div className="text-center py-12 text-muted-foreground">
-            <div className="animate-pulse">
-              <p className="text-lg">Loading your knowledge...</p>
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-background">
+            <div className="relative w-64 h-64">
+              <PixelBlast
+                variant="square"
+                pixelSize={3}
+                color={accentColor}
+                patternScale={2.5}
+                patternDensity={1.2}
+                speed={0.5}
+                edgeFade={0.3}
+                enableRipples={false}
+              />
             </div>
           </div>
         )}
