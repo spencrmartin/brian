@@ -13,25 +13,37 @@ export function useKnowledge() {
   // Get project filtering state from store
   const { currentProject, viewAllProjects } = useStore()
 
-  // Load all items with project filtering
+  // Load all items with project filtering (auto-retries on failure)
   const loadItems = useCallback(async (params = {}) => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      // Apply project filter if not viewing all projects
-      const queryParams = { ...params }
-      if (currentProject?.id && !viewAllProjects) {
-        queryParams.project_id = currentProject.id
+    const MAX_RETRIES = 3
+    const RETRY_DELAY = 1000 // ms
+    
+    setLoading(true)
+    setError(null)
+    
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        // Apply project filter if not viewing all projects
+        const queryParams = { ...params }
+        if (currentProject?.id && !viewAllProjects) {
+          queryParams.project_id = currentProject.id
+        }
+        
+        const data = await api.getItems(queryParams)
+        setItems(data)
+        setError(null)
+        setLoading(false)
+        return // Success — exit
+      } catch (err) {
+        console.error(`Failed to load items (attempt ${attempt}/${MAX_RETRIES}):`, err)
+        if (attempt === MAX_RETRIES) {
+          setError(err)
+          setLoading(false)
+        } else {
+          // Wait before retrying — backend port may still be resolving
+          await new Promise(r => setTimeout(r, RETRY_DELAY))
+        }
       }
-      
-      const data = await api.getItems(queryParams)
-      setItems(data)
-    } catch (err) {
-      setError(err)
-      console.error('Failed to load items:', err)
-    } finally {
-      setLoading(false)
     }
   }, [currentProject?.id, viewAllProjects])
 
