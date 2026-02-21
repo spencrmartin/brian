@@ -30,6 +30,16 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
   const [weather, setWeather] = useState(null)
   const [loadingWeather, setLoadingWeather] = useState(true)
   const [detailItem, setDetailItem] = useState(null)
+
+  // Update URL hash when item detail opens/closes for deep linking
+  const openItemDetail = (item) => {
+    setDetailItem(item)
+    if (item) window.location.hash = `#/item/${item.id}`
+  }
+  const closeItemDetail = () => {
+    setDetailItem(null)
+    window.location.hash = '#/'
+  }
   const [isDarkMode, setIsDarkMode] = useState(false)
   
   useEffect(() => {
@@ -210,7 +220,7 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
                   ? 'bg-gradient-to-br from-gray-200 via-gray-100 to-white border-gray-300'
                   : 'bg-gradient-to-br from-foreground/90 via-foreground/80 to-foreground/70 border-foreground/20'
               }`}
-              onClick={() => recentItem && setDetailItem(recentItem)}
+              onClick={() => recentItem && openItemDetail(recentItem)}
             >
               <div className={`absolute inset-0 bg-gradient-to-br pointer-events-none ${
                 isDarkMode ? 'from-white/20' : 'from-black/10'
@@ -382,7 +392,7 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
                         <Card 
                           key={item.id}
                           className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-background/80 via-background/50 to-background/30 border-border/50 hover:shadow-2xl transition-all duration-300 rounded-3xl cursor-pointer group"
-                          onClick={() => setDetailItem(item)}
+                          onClick={() => openItemDetail(item)}
                         >
                           {/* Frosted overlay effect */}
                           <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
@@ -461,7 +471,7 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
       {detailItem && (
         <ItemDetailSheet
           item={detailItem}
-          onClose={() => setDetailItem(null)}
+          onClose={closeItemDetail}
           onEdit={onEdit}
           onDelete={onDelete}
           onToggleFavorite={onToggleFavorite}
