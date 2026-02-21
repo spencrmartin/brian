@@ -8,7 +8,7 @@ from datetime import datetime
 from ..models import KnowledgeItem, Tag, Connection, ItemType, Region, RegionType, RegionProfile, ContextStrategy, PROFILE_TEMPLATES, Project, DEFAULT_PROJECT_ID
 from ..database import Database
 from ..database.repository import KnowledgeRepository, TagRepository, ConnectionRepository, RegionRepository, RegionProfileRepository, ProjectRepository
-from ..services import SimilarityService
+from ..services import SimilarityService, create_similarity_service
 from ..services.clustering import ClusteringService
 
 # Create router
@@ -368,7 +368,7 @@ async def get_similarity_connections(
     items_dict = [item.to_dict() for item in items]
     
     # Compute similarities
-    similarity_service = SimilarityService()
+    similarity_service = create_similarity_service()
     connections = similarity_service.find_similar_items(
         items_dict,
         threshold=threshold,
@@ -398,7 +398,7 @@ async def get_related_items(
     target_dict = target_item.to_dict()
     
     # Find similar items
-    similarity_service = SimilarityService()
+    similarity_service = create_similarity_service()
     related = similarity_service.get_related_items(
         target_dict,
         all_items_dict,
@@ -434,7 +434,7 @@ async def compute_similarity_score(
         raise HTTPException(status_code=404, detail=f"Item {item2_id} not found")
     
     # Compute similarity
-    similarity_service = SimilarityService()
+    similarity_service = create_similarity_service()
     score = similarity_service.get_similarity_score(
         item1.to_dict(),
         item2.to_dict()

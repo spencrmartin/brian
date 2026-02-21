@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useKnowledge } from '@/hooks/useKnowledge'
+import { useDeepLink } from '@/hooks/useDeepLink'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { NewItemDialog } from '@/components/NewItemDialog'
@@ -37,13 +38,28 @@ function App() {
     loadItems,
   } = useKnowledge()
 
+  // Deep linking: sync view state with URL hash
+  const { view: selectedView, initialItemId, navigate } = useDeepLink()
+  const setSelectedView = (v) => navigate(v)
+
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedView, setSelectedView] = useState('home')
   const [newDialogOpen, setNewDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [searchDialogOpen, setSearchDialogOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
+
+  // Deep link: open item detail if URL has #/item/:id
+  useEffect(() => {
+    if (initialItemId && items.length > 0) {
+      const item = items.find(i => i.id === initialItemId)
+      if (item) {
+        setSelectedItem(item)
+        setDeleteDialogOpen(false)
+        setEditDialogOpen(false)
+      }
+    }
+  }, [initialItemId, items])
 
   const handleSearch = async (query) => {
     setSearchQuery(query)

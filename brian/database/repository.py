@@ -211,6 +211,30 @@ class KnowledgeRepository:
         except Exception:
             return False
 
+    @staticmethod
+    def _sanitize_fts5_query(query_text: str) -> str:
+        """
+        Sanitize a user query for FTS5 MATCH syntax.
+        
+        FTS5 MATCH is strict:
+        - Special chars like +, -, *, ", (, ) are syntax operators
+        - Multiple words use implicit AND (all must match)
+        - Stop words / short tokens may not be indexed
+        
+        Strategy: strip special chars, split into tokens, join with OR
+        so partial matches are returned instead of nothing.
+        """
+        import re
+        # Strip FTS5 special characters
+        cleaned = re.sub(r'[+\-*"(){}[\]^~:!@#$%&=<>|\\/?.,;]', ' ', query_text)
+        # Split into tokens, filter short/empty ones
+        tokens = [t.strip() for t in cleaned.split() if len(t.strip()) >= 2]
+        if not tokens:
+            return query_text.strip()
+        # Use OR so any matching token returns results, add * prefix matching
+        # e.g. "MCP server setup" → "MCP* OR server* OR setup*"
+        return ' OR '.join(f'{t}*' for t in tokens)
+
     def _search_fts5(self, query_text: str, limit: int = 50, project_id: Optional[str] = None) -> List[KnowledgeItem]:
         """Full-text search using FTS5 virtual table."""
         import sqlite3
@@ -220,6 +244,9 @@ class KnowledgeRepository:
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
+        # Sanitize query for FTS5 — use OR + prefix matching for better recall
+        fts_query_text = self._sanitize_fts5_query(query_text)
+        
         fts_query = """
             SELECT id, rank 
             FROM knowledge_search 
@@ -227,12 +254,19 @@ class KnowledgeRepository:
             ORDER BY rank
             LIMIT ?
         """
-        cursor.execute(fts_query, (query_text, limit))
-        fts_rows = cursor.fetchall()
-        conn.close()
+        try:
+            cursor.execute(fts_query, (fts_query_text, limit))
+            fts_rows = cursor.fetchall()
+        except sqlite3.OperationalError:
+            # If the sanitized query still fails, fall back to LIKE search
+            conn.close()
+            return self._search_like(query_text, limit, project_id)
+        finally:
+            conn.close()
         
         if not fts_rows:
-            return []
+            # FTS5 returned nothing — fall back to LIKE search for broader matching
+            return self._search_like(query_text, limit, project_id)
         
         item_ids = [row['id'] for row in fts_rows]
         placeholders = ','.join('?' * len(item_ids))
@@ -540,7 +574,8 @@ class RegionRepository:
             query += " AND is_visible = 1"
         
         if project_id:
-            query += " AND project_id = ?"
+            # Include regions for this project AND global regions (no project_id)
+            query += " AND (project_id = ? OR project_id IS NULL)"
             params.append(project_id)
         
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"

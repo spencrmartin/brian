@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from brian.database.connection import Database
 from brian.database.repository import KnowledgeRepository, RegionRepository, RegionProfileRepository, ProjectRepository, ConnectionRepository
-from brian.services.similarity import SimilarityService
+from brian.services.similarity import SimilarityService, create_similarity_service
 from brian.services.link_preview import fetch_link_metadata, is_google_doc
 from brian.models.knowledge_item import KnowledgeItem, ItemType, Region, RegionType, RegionProfile, ContextStrategy, PROFILE_TEMPLATES, Project, DEFAULT_PROJECT_ID, Connection
 from brian.skills import list_available_skills, fetch_skill, skill_to_knowledge_item, SkillImportError
@@ -63,7 +63,7 @@ def init_services():
     profile_repo = RegionProfileRepository(db)
     project_repo = ProjectRepository(db)
     conn_repo = ConnectionRepository(db)
-    similarity_service = SimilarityService()
+    similarity_service = create_similarity_service()
 
 
 # Load HTML template for item view
@@ -247,8 +247,8 @@ async def handle_list_tools() -> list[Tool]:
                     },
                     "limit": {
                         "type": "integer",
-                        "description": "Maximum number of results to return (default: 10)",
-                        "default": 10
+                        "description": "Maximum number of results to return (default: 50)",
+                        "default": 50
                     }
                 },
                 "required": ["query"]
@@ -372,6 +372,11 @@ For simple web links without document content:
                         "type": "integer",
                         "description": "Maximum number of items to return",
                         "default": 5
+                    },
+                    "max_content_length": {
+                        "type": "integer",
+                        "description": "Maximum characters of content to include per item. 0 or null for full content (default: full content)",
+                        "default": 0
                     }
                 },
                 "required": ["topic"]
@@ -901,7 +906,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
         query = arguments["query"]
         item_type = arguments.get("item_type")
         project_id = arguments.get("project_id")
-        limit = arguments.get("limit", 10)
+        limit = arguments.get("limit", 50)
         
         # First, do full-text search (with optional project scoping)
         text_results = repo.search(query, project_id=project_id)
@@ -943,8 +948,45 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
                 })
                 seen_ids.add(item.id)
         
-        # If we need more results, add similar items
-        if len(results_with_scores) < limit and text_results:
+        # If we need more results, use similarity-based search
+        # When text_results exist, use them as seeds; otherwise use the query itself
+        if len(results_with_scores) < limit:
+            seed_items = []
+            if text_results:
+                # Use top text matches as seeds
+                for item in text_results[:3]:
+                    seed_items.append(next((i for i in items_dict if i['id'] == item.id), None))
+                seed_items = [s for s in seed_items if s is not None]
+            
+            if not seed_items and items_dict:
+                # No text results — create a pseudo-item from the query and find
+                # the most similar items to it directly
+                query_pseudo = {'id': '__query__', 'title': query, 'content': query, 'tags': []}
+                similar = similarity_service.get_related_items(
+                    query_pseudo,
+                    items_dict,
+                    top_k=limit,
+                    threshold=0.05  # Lower threshold for query-based similarity
+                )
+                for similar_item, similarity_score in similar:
+                    if similar_item['id'] not in seen_ids and len(results_with_scores) < limit:
+                        full_item = next((i for i in all_items if i.id == similar_item['id']), None)
+                        if full_item:
+                            if item_type and (str(full_item.item_type.value) if hasattr(full_item.item_type, 'value') else str(full_item.item_type)) != item_type:
+                                continue
+                            results_with_scores.append({
+                                "id": full_item.id,
+                                "title": full_item.title,
+                                "content": full_item.content[:200] + "..." if len(full_item.content) > 200 else full_item.content,
+                                "type": str(full_item.item_type.value) if hasattr(full_item.item_type, 'value') else str(full_item.item_type),
+                                "tags": full_item.tags,
+                                "url": full_item.url,
+                                "created_at": full_item.created_at.isoformat() if full_item.created_at else None,
+                                "relevance": "semantic",
+                                "score": similarity_score
+                            })
+                            seen_ids.add(full_item.id)
+            
             for item in text_results[:3]:  # Use top 3 matches as seeds
                 item_dict = next((i for i in items_dict if i['id'] == item.id), None)
                 if item_dict:
@@ -1170,6 +1212,13 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
     elif name == "get_knowledge_context":
         topic = arguments["topic"]
         limit = arguments.get("limit", 5)
+        max_content_length = arguments.get("max_content_length", 0)
+        
+        def _truncate_content(content: str) -> str:
+            """Truncate content if max_content_length is set, otherwise return full content."""
+            if max_content_length and max_content_length > 0 and len(content) > max_content_length:
+                return content[:max_content_length] + "..."
+            return content
         
         # Search for the topic
         results = repo.search(topic)
@@ -1195,7 +1244,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
                 context_items.append({
                     "id": item.id,
                     "title": item.title,
-                    "content": item.content[:300] + "..." if len(item.content) > 300 else item.content,
+                    "content": _truncate_content(item.content),
                     "type": str(item.item_type.value) if hasattr(item.item_type, 'value') else str(item.item_type),
                     "tags": item.tags,
                     "relevance": "direct_match"
@@ -1221,7 +1270,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
                                 context_items.append({
                                     "id": full_item.id,
                                     "title": full_item.title,
-                                    "content": full_item.content[:300] + "..." if len(full_item.content) > 300 else full_item.content,
+                                    "content": _truncate_content(full_item.content),
                                     "type": str(full_item.item_type.value) if hasattr(full_item.item_type, 'value') else str(full_item.item_type),
                                     "tags": full_item.tags,
                                     "relevance": "similar",
@@ -2081,7 +2130,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
             "items": [{
                 "id": item.id,
                 "title": item.title,
-                "content": item.content[:300] + "..." if len(item.content) > 300 else item.content,
+                "content": item.content,
                 "type": str(item.item_type.value) if hasattr(item.item_type, 'value') else str(item.item_type),
                 "tags": item.tags,
                 "url": item.url
