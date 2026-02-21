@@ -1,7 +1,8 @@
 """
 API routes for brian
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form
+from fastapi.responses import FileResponse as FastAPIFileResponse
 from typing import List, Optional
 from datetime import datetime
 
@@ -1218,6 +1219,70 @@ async def update_project_access(project_id: str):
     # Return updated project
     updated = project_repo.get_by_id(project_id)
     return updated.to_dict()
+
+
+# ── Image Upload Endpoints ───────────────────────────────────────────────────
+
+
+@router.post("/upload/image", response_model=dict, status_code=201)
+async def upload_image(
+    file: UploadFile = File(...),
+    title: str = Form(""),
+    tags: str = Form(""),
+    project_id: str = Form(""),
+):
+    """Upload an image and store it as a base64 data URL in the database."""
+    import base64
+
+    repo, _, _, _, _, project_repo = get_repositories()
+
+    # Validate file type
+    allowed = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"}
+    if file.content_type not in allowed:
+        raise HTTPException(status_code=400, detail=f"Unsupported image type: {file.content_type}")
+
+    # Read file and encode as base64 data URL
+    contents = await file.read()
+    b64 = base64.b64encode(contents).decode("utf-8")
+    data_url = f"data:{file.content_type};base64,{b64}"
+
+    # Resolve project
+    pid = project_id if project_id else None
+    if not pid:
+        default_project = project_repo.get_default()
+        pid = default_project.id if default_project else None
+
+    # Create knowledge item — image stored directly in content as data URL
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
+    item = KnowledgeItem(
+        title=title or file.filename or "Untitled Image",
+        content=data_url,
+        item_type=ItemType.IMAGE,
+        url=data_url,
+        tags=tag_list,
+        project_id=pid,
+    )
+    created = repo.create(item)
+    return created.to_dict()
+
+
+@router.get("/images/{filename}")
+async def serve_image(filename: str):
+    """Serve an uploaded image from ~/.brian/images/ (legacy fallback for old items)."""
+    from pathlib import Path
+
+    images_dir = Path.home() / ".brian" / "images"
+    filepath = images_dir / filename
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    ext = filepath.suffix.lower()
+    media_types = {
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".png": "image/png", ".gif": "image/gif",
+        ".webp": "image/webp", ".svg": "image/svg+xml",
+    }
+    return FastAPIFileResponse(str(filepath), media_type=media_types.get(ext, "application/octet-stream"))
 
 
 # ── Database Management Endpoints ────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { getApiBaseUrl } from "@/lib/backend"
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -22,7 +22,12 @@ import {
   Palette,
   LayoutGrid,
   AlertTriangle,
-  LogOut
+  LogOut,
+  Plug,
+  Check,
+  Loader2,
+  Copy,
+  Code2
 } from 'lucide-react'
 import { useSettings } from '@/contexts/SettingsContext'
 import { getUserName } from '@/components/Onboarding'
@@ -42,6 +47,102 @@ export function Settings({ items = [], onImport }) {
   const [clearDialogOpen, setClearDialogOpen] = useState(false)
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [exportSuccess, setExportSuccess] = useState(false)
+
+  // ── AI Tools / MCP state ──────────────────────────────────────────────────
+  const [toolStatus, setToolStatus] = useState({})
+  const [toolsLoading, setToolsLoading] = useState(true)
+  const [connecting, setConnecting] = useState(null)
+  const [connectError, setConnectError] = useState(null)
+  const [mcpConfig, setMcpConfig] = useState('')
+  const [showMcpConfig, setShowMcpConfig] = useState(false)
+  const [copied, setCopied] = useState(false)
+  const [usingSidecar, setUsingSidecar] = useState(false)
+
+  const aiTools = [
+    { id: 'goose', name: 'Goose', description: "Block's open-source AI agent", icon: '/goose-logo.png' },
+    { id: 'claude', name: 'Claude Desktop', description: "Anthropic's desktop assistant", icon: '/claude-logo.svg' },
+    { id: 'cursor', name: 'Cursor', description: 'AI-powered code editor', icon: '/cursor-logo.png' },
+  ]
+
+  // Fetch tool status + MCP info on mount
+  useEffect(() => {
+    const fetchToolInfo = async () => {
+      try {
+        const [statusRes, mcpRes] = await Promise.all([
+          fetch(`${getApiBaseUrl()}/tools/status`),
+          fetch(`${getApiBaseUrl()}/tools/mcp-info`),
+        ])
+        if (statusRes.ok) setToolStatus(await statusRes.json())
+        if (mcpRes.ok) {
+          const info = await mcpRes.json()
+          setUsingSidecar(info.using_sidecar ?? false)
+          setMcpConfig(JSON.stringify({
+            mcpServers: {
+              brian: {
+                command: info.command ?? 'brian-backend',
+                args: info.args ?? ['--mcp'],
+                env: info.env ?? { BRIAN_DB_PATH: '~/.brian/brian.db' },
+              },
+            },
+          }, null, 2))
+        }
+      } catch { /* silent */ }
+      finally { setToolsLoading(false) }
+    }
+    fetchToolInfo()
+  }, [])
+
+  const handleConnect = async (toolId) => {
+    setConnecting(toolId)
+    setConnectError(null)
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/tools/connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tool: toolId }),
+      })
+      if (res.ok) {
+        setToolStatus(prev => ({ ...prev, [toolId]: true }))
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setConnectError(data.detail || 'Connection failed')
+      }
+    } catch {
+      setConnectError('Could not reach backend')
+    } finally {
+      setConnecting(null)
+    }
+  }
+
+  const handleReconnectAll = async () => {
+    setConnecting('all')
+    setConnectError(null)
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/tools/auto-connect`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const newStatus = {}
+        for (const [tool, result] of Object.entries(data.results ?? {})) {
+          newStatus[tool] = result.status === 'connected'
+        }
+        setToolStatus(prev => ({ ...prev, ...newStatus }))
+        setUsingSidecar(data.using_sidecar ?? false)
+      }
+    } catch {
+      setConnectError('Could not reach backend')
+    } finally {
+      setConnecting(null)
+    }
+  }
+
+  const handleCopyMcp = () => {
+    navigator.clipboard.writeText(mcpConfig)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const accentColors = [
     { name: 'Blue', value: '#3b82f6' },
@@ -314,6 +415,144 @@ export function Settings({ items = [], onImport }) {
                 Clear
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* AI Tools / MCP Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Plug className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">AI Tools</CardTitle>
+                <CardDescription>
+                  Connect Brian as an MCP server to your AI assistants
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Reconnect All button */}
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                {usingSidecar
+                  ? 'Using bundled MCP server — no Python required'
+                  : 'Using system Python for MCP server'}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReconnectAll}
+                disabled={connecting === 'all'}
+                className="flex items-center gap-2"
+              >
+                {connecting === 'all' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Plug className="w-3.5 h-3.5" />
+                )}
+                {connecting === 'all' ? 'Configuring…' : 'Reconnect All'}
+              </Button>
+            </div>
+
+            {/* Tool list */}
+            <div className="space-y-2">
+              {aiTools.map((tool) => {
+                const isConnected = toolStatus[tool.id]
+                const isConnecting = connecting === tool.id
+
+                return (
+                  <div
+                    key={tool.id}
+                    className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
+                      isConnected
+                        ? 'border-border bg-muted/50'
+                        : 'border-border/50 bg-card'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-muted shrink-0">
+                      <img src={tool.icon} alt={tool.name} className="w-6 h-6 object-contain" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{tool.name}</p>
+                      <p className="text-xs text-muted-foreground">{tool.description}</p>
+                    </div>
+                    <div className="shrink-0">
+                      {toolsLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      ) : isConnected ? (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <Check className="w-3 h-3" />
+                            Connected
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => handleConnect(tool.id)}
+                            disabled={isConnecting}
+                          >
+                            {isConnecting ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Reconnect'}
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleConnect(tool.id)}
+                          disabled={isConnecting}
+                          className="flex items-center gap-1.5"
+                        >
+                          {isConnecting ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Plug className="w-3.5 h-3.5" />
+                          )}
+                          Connect
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {connectError && (
+              <p className="text-xs text-destructive">{connectError}</p>
+            )}
+
+            {/* MCP Config toggle */}
+            <button
+              onClick={() => setShowMcpConfig(!showMcpConfig)}
+              className="w-full flex items-center gap-3 p-3 rounded-lg border border-dashed border-border/50 text-left hover:bg-muted/30 transition-colors"
+            >
+              <Code2 className="w-4 h-4 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-muted-foreground">MCP Config</p>
+                <p className="text-xs text-muted-foreground">Manual setup for other tools</p>
+              </div>
+              <svg className={`w-4 h-4 text-muted-foreground transition-transform ${showMcpConfig ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+
+            {showMcpConfig && (
+              <div className="relative rounded-lg border bg-muted/30 p-4">
+                <pre className="text-xs text-foreground/70 font-mono whitespace-pre overflow-x-auto">
+                  {mcpConfig || 'Loading...'}
+                </pre>
+                <button
+                  onClick={handleCopyMcp}
+                  disabled={!mcpConfig}
+                  className="absolute top-3 right-3 px-2.5 py-1 rounded-md bg-muted text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -15,6 +15,7 @@ class ItemType(str, Enum):
     SNIPPET = "snippet"
     PAPER = "paper"
     SKILL = "skill"  # Anthropic skills from skills repository
+    IMAGE = "image"  # Photo/image with optional caption
 
 
 class RegionType(str, Enum):

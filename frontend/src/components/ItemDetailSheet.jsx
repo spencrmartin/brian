@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { ProjectPill } from './ProjectPill'
 import { Highlight, themes } from 'prism-react-renderer'
 import MarkdownContent from './MarkdownContent'
+import { getApiBaseUrl } from '@/lib/backend'
 import { 
   Link as LinkIcon, 
   FileText, 
@@ -21,7 +22,7 @@ import {
   BookOpen,
   Image as ImageIcon
 } from 'lucide-react'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 
 // Language display names for code snippets
@@ -99,7 +100,14 @@ export function ItemDetailSheet({
   if (!item) return null
 
   const isCodeItem = item.item_type === 'code' || item.item_type === 'snippet'
+  const isLinkWithUrl = item.item_type === 'link' && item.url
   const isSkill = item.item_type === 'skill'
+  const [iframeError, setIframeError] = useState(false)
+  
+  // Reset iframe error when item changes
+  useEffect(() => {
+    setIframeError(false)
+  }, [item?.id])
   const language = (item.language || 'javascript').toLowerCase()
   const langConfig = LANGUAGE_CONFIG[language] || { 
     name: language.charAt(0).toUpperCase() + language.slice(1), 
@@ -223,13 +231,62 @@ export function ItemDetailSheet({
           
           {/* Content - Scrollable */}
           <div className="px-6 py-6 overflow-y-auto flex-1">
-            {/* Title */}
-            <h3 className="font-normal text-xl mb-4 leading-snug">
-              {item.title}
-            </h3>
+            {/* Title (hidden for image items) */}
+            {item.item_type !== 'image' && (
+              <h3 className="font-normal text-xl mb-4 leading-snug">
+                {item.title}
+              </h3>
+            )}
             
-            {/* Code Content with Syntax Highlighting */}
-            {isCodeItem ? (
+            {/* Image items: just the photo, nothing else */}
+            {item.item_type === 'image' && (item.url || item.content) && (() => {
+              const src = item.url || item.content
+              const imgSrc = src.startsWith('/api/')
+                ? `${getApiBaseUrl().replace('/api/v1', '')}${src}`
+                : src
+              return (
+                <div className="-mx-6 -mt-6">
+                  <img 
+                    src={imgSrc}
+                    alt={item.title}
+                    className="w-full object-contain"
+                    loading="lazy"
+                    onError={(e) => { e.target.style.display = 'none' }}
+                  />
+                </div>
+              )
+            })()}
+
+            {/* Link items with URL: show iframe preview */}
+            {isLinkWithUrl && !iframeError ? (
+              <div className="mb-4">
+                <div className="rounded-xl border border-border overflow-hidden bg-white" style={{ height: '400px' }}>
+                  <iframe
+                    src={item.url}
+                    title={item.title}
+                    className="w-full h-full border-0"
+                    sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                    loading="lazy"
+                    onError={() => setIframeError(true)}
+                    onLoad={(e) => {
+                      // Some sites block iframes — detect via empty content
+                      try {
+                        // Can't access cross-origin content, but if the load event fires
+                        // without error, we assume it worked
+                      } catch {
+                        setIframeError(true)
+                      }
+                    }}
+                  />
+                </div>
+                {/* Fallback content below iframe */}
+                {item.content && item.content !== item.url && (
+                  <div className="mt-4 text-muted-foreground">
+                    <MarkdownContent content={item.content} />
+                  </div>
+                )}
+              </div>
+            ) : isCodeItem ? (
               <div className="mb-4">
                 {/* Language Badge */}
                 <div className="flex items-center gap-2 mb-3">
@@ -358,8 +415,8 @@ export function ItemDetailSheet({
               </div>
             )}
             
-            {/* URL */}
-            {item.url && (
+            {/* URL (hide for image items since it's a data URL) */}
+            {item.url && item.item_type !== 'image' && (
               <a
                 href={item.url}
                 target="_blank"

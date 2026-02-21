@@ -16,9 +16,11 @@ import {
   FileText,
   Code2,
   FileCode,
-  Brain
+  Brain,
+  Image as ImageIcon
 } from 'lucide-react'
 import { truncateTitle } from '@/lib/utils'
+import { getApiBaseUrl } from '@/lib/backend'
 import ContentPreview from '@/components/ContentPreview'
 import { ItemDetailSheet } from '@/components/ItemDetailSheet'
 import { useSettings } from '@/contexts/SettingsContext'
@@ -111,10 +113,23 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
       note: FileText,
       code: Code2,
       paper: FileCode,
-      skill: Brain
+      skill: Brain,
+      image: ImageIcon
     }
     const Icon = iconMap[type] || FileText
     return <Icon className="w-6 h-6" />
+  }
+
+  // Resolve image source — base64 data URL or legacy /api/v1/images/ path
+  const resolveImageUrl = (item) => {
+    if (item.item_type !== 'image') return null
+    const src = item.url || item.content
+    if (!src) return null
+    // Legacy items store /api/v1/images/... — need full backend URL
+    if (src.startsWith('/api/')) {
+      return `${getApiBaseUrl().replace('/api/v1', '')}${src}`
+    }
+    return src  // data:image/...;base64,... or full URL
   }
 
   // Simple graph preview data
@@ -388,76 +403,101 @@ export default function HomeView({ items, loadItems, onEdit, onDelete, onToggleF
                     
                     {/* Items Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-0.5">
-                      {dateItems.map((item) => (
-                        <Card 
-                          key={item.id}
-                          className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-background/80 via-background/50 to-background/30 border-border/50 hover:shadow-2xl transition-all duration-300 rounded-3xl cursor-pointer group"
-                          onClick={() => openItemDetail(item)}
-                        >
-                          {/* Frosted overlay effect */}
-                          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
-                          
-                          <div className="relative p-6 h-full flex flex-col">
-                            {/* Header with icon and type */}
-                            <div className="flex items-start justify-between gap-2 mb-3">
-                              <div className="flex items-center gap-2">
-                                <div className="p-2 rounded-full bg-accent/10">
-                                  {getTypeIcon(item.item_type)}
+                      {dateItems.map((item) => {
+                        const imageUrl = resolveImageUrl(item)
+                        
+                        // Image items: just the photo, nothing else
+                        if (imageUrl) {
+                          return (
+                            <Card 
+                              key={item.id}
+                              className="relative overflow-hidden border-border/50 hover:shadow-2xl transition-all duration-300 rounded-3xl cursor-pointer group"
+                              onClick={() => openItemDetail(item)}
+                            >
+                              <img 
+                                src={imageUrl} 
+                                alt={item.title}
+                                className="w-full object-cover"
+                                style={{ minHeight: '200px', maxHeight: '300px' }}
+                                loading="lazy"
+                                onError={(e) => { e.target.style.display = 'none' }}
+                              />
+                            </Card>
+                          )
+                        }
+                        
+                        // Regular card for non-image items
+                        return (
+                          <Card 
+                            key={item.id}
+                            className="relative overflow-hidden backdrop-blur-xl bg-gradient-to-br from-background/80 via-background/50 to-background/30 border-border/50 hover:shadow-2xl transition-all duration-300 rounded-3xl cursor-pointer group"
+                            onClick={() => openItemDetail(item)}
+                          >
+                            {/* Frosted overlay effect */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                            
+                            <div className="relative p-6 h-full flex flex-col">
+                              {/* Header with icon and type */}
+                              <div className="flex items-start justify-between gap-2 mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="p-2 rounded-full bg-accent/10">
+                                    {getTypeIcon(item.item_type)}
+                                  </div>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {item.item_type}
+                                  </Badge>
                                 </div>
-                                <Badge variant="secondary" className="text-xs">
-                                  {item.item_type}
-                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(item.created_at).toLocaleDateString('en-US', { 
+                                    month: 'short', 
+                                    day: 'numeric'
+                                  })}
+                                </span>
                               </div>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(item.created_at).toLocaleDateString('en-US', { 
-                                  month: 'short', 
-                                  day: 'numeric'
-                                })}
-                              </span>
-                            </div>
 
-                            {/* Title */}
-                            <h4 className="text-lg font-light mb-2 line-clamp-2 leading-snug">
-                              {truncateTitle(item.title, 70)}
-                            </h4>
+                              {/* Title */}
+                              <h4 className="text-lg font-light mb-2 line-clamp-2 leading-snug">
+                                {truncateTitle(item.title, 70)}
+                              </h4>
 
-                            {/* Content Preview */}
-                            <div className="text-sm text-muted-foreground line-clamp-3 mb-3 flex-1">
-                              <ContentPreview content={item.content} maxLength={150} />
-                            </div>
-
-                            {/* URL if exists */}
-                            {item.url && (
-                              <a
-                                href={item.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-blue-400 hover:underline flex items-center gap-1 truncate mb-3"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <LinkIcon className="w-3 h-3 flex-shrink-0" />
-                                <span className="truncate">{new URL(item.url).hostname}</span>
-                              </a>
-                            )}
-
-                            {/* Tags */}
-                            {item.tags && item.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 pt-3 border-t border-border/50">
-                                {item.tags.slice(0, 3).map((tag, index) => (
-                                  <Badge key={index} variant="outline" className="text-xs">
-                                    {tag}
-                                  </Badge>
-                                ))}
-                                {item.tags.length > 3 && (
-                                  <Badge variant="outline" className="text-xs">
-                                    +{item.tags.length - 3}
-                                  </Badge>
-                                )}
+                              {/* Content Preview */}
+                              <div className="text-sm text-muted-foreground line-clamp-3 mb-3 flex-1">
+                                <ContentPreview content={item.content} maxLength={150} />
                               </div>
-                            )}
-                          </div>
-                        </Card>
-                      ))}
+
+                              {/* URL if exists */}
+                              {item.url && item.item_type !== 'image' && (
+                                <a
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-blue-400 hover:underline flex items-center gap-1 truncate mb-3"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <LinkIcon className="w-3 h-3 flex-shrink-0" />
+                                  <span className="truncate">{new URL(item.url).hostname}</span>
+                                </a>
+                              )}
+
+                              {/* Tags */}
+                              {item.tags && item.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-1.5 pt-3 border-t border-border/50">
+                                  {item.tags.slice(0, 3).map((tag, index) => (
+                                    <Badge key={index} variant="outline" className="text-xs">
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                  {item.tags.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{item.tags.length - 3}
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </Card>
+                        )
+                      })}
                     </div>
                   </motion.div>
                 ))
