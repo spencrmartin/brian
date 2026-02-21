@@ -531,7 +531,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
       .attr('stroke', '#999')
   }
 
-  // Fetch similarity connections from API
+  // Fetch similarity connections AND explicit connections from API
   // In universe mode: fetch ALL connections across all projects
   // In normal mode: scope to current project
   useEffect(() => {
@@ -545,9 +545,36 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
           url += `&project_id=${currentProject.id}`
         }
         
-        const response = await fetch(url)
-        const data = await response.json()
-        setConnections(data)
+        // Fetch both similarity and explicit connections in parallel
+        const [similarityResponse, explicitResponse] = await Promise.all([
+          fetch(url),
+          fetch(getApiBaseUrl() + '/graph'),
+        ])
+        
+        const similarityData = await similarityResponse.json()
+        const explicitData = await explicitResponse.json()
+        
+        // Merge explicit connections into similarity format
+        // Explicit connections have: source_item_id, target_item_id, strength, connection_type
+        // Similarity connections have: source_item_id, target_item_id, similarity
+        const explicitConnections = (explicitData.connections || []).map(conn => ({
+          source_item_id: conn.source_item_id,
+          target_item_id: conn.target_item_id,
+          similarity: conn.strength || 1.0,
+          connection_type: conn.connection_type || 'explicit',
+          is_explicit: true,
+        }))
+        
+        // Deduplicate: if an explicit connection overlaps with a similarity one, keep the explicit
+        const explicitPairs = new Set(
+          explicitConnections.map(c => `${c.source_item_id}:${c.target_item_id}`)
+        )
+        const filteredSimilarity = similarityData.filter(c => 
+          !explicitPairs.has(`${c.source_item_id}:${c.target_item_id}`) &&
+          !explicitPairs.has(`${c.target_item_id}:${c.source_item_id}`)
+        )
+        
+        setConnections([...filteredSimilarity, ...explicitConnections])
         
         // In universe mode, also fetch all items across all projects
         if (universeMode) {
@@ -560,7 +587,7 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
           }
         }
       } catch (error) {
-        console.error('Failed to fetch similarity connections:', error)
+        console.error('Failed to fetch connections:', error)
         setConnections([])
       } finally {
         setLoading(false)
@@ -754,14 +781,36 @@ export function SimilarityGraph({ items, width = 1200, height = 800 }) {
         try {
           setLoading(true)
           
-          // Fetch connections
-          const connectionsResponse = await fetch(getApiBaseUrl() + '/similarity/connections?threshold=0.15&max_per_item=5')
-          const connectionsData = await connectionsResponse.json()
-          setConnections(connectionsData)
+          // Fetch both similarity and explicit connections in parallel
+          const [connectionsResponse, explicitResponse, itemsResponse] = await Promise.all([
+            fetch(getApiBaseUrl() + '/similarity/connections?threshold=0.15&max_per_item=5'),
+            fetch(getApiBaseUrl() + '/graph'),
+            fetch(getApiBaseUrl() + '/items'),
+          ])
           
-          // Fetch all items
-          const itemsResponse = await fetch(getApiBaseUrl() + '/items')
+          const connectionsData = await connectionsResponse.json()
+          const explicitData = await explicitResponse.json()
           const allItemsData = await itemsResponse.json()
+          
+          // Merge explicit connections
+          const explicitConnections = (explicitData.connections || []).map(conn => ({
+            source_item_id: conn.source_item_id,
+            target_item_id: conn.target_item_id,
+            similarity: conn.strength || 1.0,
+            connection_type: conn.connection_type || 'explicit',
+            is_explicit: true,
+          }))
+          
+          const explicitPairs = new Set(
+            explicitConnections.map(c => `${c.source_item_id}:${c.target_item_id}`)
+          )
+          const filteredSimilarity = connectionsData.filter(c => 
+            !explicitPairs.has(`${c.source_item_id}:${c.target_item_id}`) &&
+            !explicitPairs.has(`${c.target_item_id}:${c.source_item_id}`)
+          )
+          
+          setConnections([...filteredSimilarity, ...explicitConnections])
+          
           console.log('[SimilarityGraph] Fetched all items:', allItemsData.length)
           setAllItems(allItemsData)
         } catch (err) {

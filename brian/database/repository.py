@@ -540,7 +540,8 @@ class RegionRepository:
             query += " AND is_visible = 1"
         
         if project_id:
-            query += " AND project_id = ?"
+            # Include regions for this project AND global regions (no project_id)
+            query += " AND (project_id = ? OR project_id IS NULL)"
             params.append(project_id)
         
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
