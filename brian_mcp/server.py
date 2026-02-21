@@ -247,8 +247,8 @@ async def handle_list_tools() -> list[Tool]:
                     },
                     "limit": {
                         "type": "integer",
-                        "description": "Maximum number of results to return (default: 10)",
-                        "default": 10
+                        "description": "Maximum number of results to return (default: 50)",
+                        "default": 50
                     }
                 },
                 "required": ["query"]
@@ -901,7 +901,7 @@ async def handle_call_tool(name: str, arguments: dict) -> list[TextContent]:
         query = arguments["query"]
         item_type = arguments.get("item_type")
         project_id = arguments.get("project_id")
-        limit = arguments.get("limit", 10)
+        limit = arguments.get("limit", 50)
         
         # First, do full-text search (with optional project scoping)
         text_results = repo.search(query, project_id=project_id)
