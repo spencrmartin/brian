@@ -1,7 +1,7 @@
 /**
  * Custom hook for managing knowledge items
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '@/lib/api'
 import { useStore } from '@/store/useStore'
 
@@ -9,35 +9,60 @@ export function useKnowledge() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const initialLoadDone = useRef(false)
   
   // Get project filtering state from store
   const { currentProject, viewAllProjects } = useStore()
+  
+  // Create stable project ID value (null instead of undefined)
+  const projectId = currentProject?.id || null
 
-  // Load all items with project filtering
+  // Load all items with project filtering (auto-retries on failure)
   const loadItems = useCallback(async (params = {}) => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      // Apply project filter if not viewing all projects
-      const queryParams = { ...params }
-      if (currentProject?.id && !viewAllProjects) {
-        queryParams.project_id = currentProject.id
+    const MAX_RETRIES = 3
+    const RETRY_DELAY = 1000 // ms
+    
+    setLoading(true)
+    setError(null)
+    
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        // Apply project filter if not viewing all projects
+        const queryParams = { ...params }
+        if (projectId && !viewAllProjects) {
+          queryParams.project_id = projectId
+        }
+        
+        const data = await api.getItems(queryParams)
+        setItems(data)
+        setError(null)
+        setLoading(false)
+        initialLoadDone.current = true
+        return // Success — exit
+      } catch (err) {
+        console.error(`Failed to load items (attempt ${attempt}/${MAX_RETRIES}):`, err)
+        if (attempt === MAX_RETRIES) {
+          setError(err)
+          setLoading(false)
+          initialLoadDone.current = true
+        } else {
+          // Wait before retrying — backend port may still be resolving
+          await new Promise(r => setTimeout(r, RETRY_DELAY))
+        }
       }
-      
-      const data = await api.getItems(queryParams)
-      setItems(data)
-    } catch (err) {
-      setError(err)
-      console.error('Failed to load items:', err)
-    } finally {
-      setLoading(false)
     }
-  }, [currentProject?.id, viewAllProjects])
+  }, [projectId, viewAllProjects])
 
-  // Reload items when project filter changes
+  // Initial load and reload when project filter changes
   useEffect(() => {
     loadItems()
+  }, [projectId, viewAllProjects])
+
+  // Listen for custom reload events (e.g. after image upload in NewItemDialog)
+  useEffect(() => {
+    const handler = () => loadItems()
+    window.addEventListener('brian-items-changed', handler)
+    return () => window.removeEventListener('brian-items-changed', handler)
   }, [loadItems])
 
   // Create new item

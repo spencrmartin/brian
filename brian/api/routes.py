@@ -1,14 +1,15 @@
 """
 API routes for brian
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File, Form
+from fastapi.responses import FileResponse as FastAPIFileResponse
 from typing import List, Optional
 from datetime import datetime
 
 from ..models import KnowledgeItem, Tag, Connection, ItemType, Region, RegionType, RegionProfile, ContextStrategy, PROFILE_TEMPLATES, Project, DEFAULT_PROJECT_ID
 from ..database import Database
 from ..database.repository import KnowledgeRepository, TagRepository, ConnectionRepository, RegionRepository, RegionProfileRepository, ProjectRepository
-from ..services import SimilarityService
+from ..services import SimilarityService, create_similarity_service
 from ..services.clustering import ClusteringService
 
 # Create router
@@ -368,7 +369,7 @@ async def get_similarity_connections(
     items_dict = [item.to_dict() for item in items]
     
     # Compute similarities
-    similarity_service = SimilarityService()
+    similarity_service = create_similarity_service()
     connections = similarity_service.find_similar_items(
         items_dict,
         threshold=threshold,
@@ -398,7 +399,7 @@ async def get_related_items(
     target_dict = target_item.to_dict()
     
     # Find similar items
-    similarity_service = SimilarityService()
+    similarity_service = create_similarity_service()
     related = similarity_service.get_related_items(
         target_dict,
         all_items_dict,
@@ -434,7 +435,7 @@ async def compute_similarity_score(
         raise HTTPException(status_code=404, detail=f"Item {item2_id} not found")
     
     # Compute similarity
-    similarity_service = SimilarityService()
+    similarity_service = create_similarity_service()
     score = similarity_service.get_similarity_score(
         item1.to_dict(),
         item2.to_dict()
@@ -1218,3 +1219,547 @@ async def update_project_access(project_id: str):
     # Return updated project
     updated = project_repo.get_by_id(project_id)
     return updated.to_dict()
+
+
+# ── Image Upload Endpoints ───────────────────────────────────────────────────
+
+
+@router.post("/upload/image", response_model=dict, status_code=201)
+async def upload_image(
+    file: UploadFile = File(...),
+    title: str = Form(""),
+    tags: str = Form(""),
+    project_id: str = Form(""),
+):
+    """Upload an image and store it as a base64 data URL in the database."""
+    import base64
+
+    repo, _, _, _, _, project_repo = get_repositories()
+
+    # Validate file type
+    allowed = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"}
+    if file.content_type not in allowed:
+        raise HTTPException(status_code=400, detail=f"Unsupported image type: {file.content_type}")
+
+    # Read file and encode as base64 data URL
+    contents = await file.read()
+    b64 = base64.b64encode(contents).decode("utf-8")
+    data_url = f"data:{file.content_type};base64,{b64}"
+
+    # Resolve project
+    pid = project_id if project_id else None
+    if not pid:
+        default_project = project_repo.get_default()
+        pid = default_project.id if default_project else None
+
+    # Create knowledge item — image stored directly in content as data URL
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else []
+    item = KnowledgeItem(
+        title=title or file.filename or "Untitled Image",
+        content=data_url,
+        item_type=ItemType.IMAGE,
+        url=data_url,
+        tags=tag_list,
+        project_id=pid,
+    )
+    created = repo.create(item)
+    return created.to_dict()
+
+
+@router.get("/images/{filename}")
+async def serve_image(filename: str):
+    """Serve an uploaded image from ~/.brian/images/ (legacy fallback for old items)."""
+    from pathlib import Path
+
+    images_dir = Path.home() / ".brian" / "images"
+    filepath = images_dir / filename
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    ext = filepath.suffix.lower()
+    media_types = {
+        ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+        ".png": "image/png", ".gif": "image/gif",
+        ".webp": "image/webp", ".svg": "image/svg+xml",
+    }
+    return FastAPIFileResponse(str(filepath), media_type=media_types.get(ext, "application/octet-stream"))
+
+
+# ── Database Management Endpoints ────────────────────────────────────────────
+
+@router.get("/database/info")
+async def get_database_info():
+    """Get database info including schema version, path, size, and FTS5 status"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    from pathlib import Path
+    db_file = Path(db.db_path)
+    size_mb = round(db_file.stat().st_size / (1024 * 1024), 2) if db_file.exists() else 0
+    
+    return {
+        "path": db.db_path,
+        "size_mb": size_mb,
+        "schema_version": db.get_schema_version(),
+        "sqlite_version": db.get_sqlite_version(),
+        "fts5_available": db.fts5_available(),
+    }
+
+
+@router.get("/database/backups")
+async def list_backups():
+    """List all database backups"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    backups = db.list_backups()
+    return {"count": len(backups), "backups": backups}
+
+
+@router.post("/database/backups")
+async def create_backup():
+    """Create a manual database backup"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    backup_path = db.backup(reason="manual")
+    if backup_path is None:
+        raise HTTPException(status_code=500, detail="Backup failed")
+    
+    return {"path": backup_path, "message": "Backup created successfully"}
+
+
+@router.post("/database/restore")
+async def restore_backup(data: dict):
+    """Restore database from a backup file. Requires {"path": "..."}"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    backup_path = data.get("path")
+    if not backup_path:
+        raise HTTPException(status_code=400, detail="Missing 'path' field")
+    
+    success = db.restore(backup_path)
+    if not success:
+        raise HTTPException(status_code=500, detail="Restore failed")
+    
+    return {"message": "Database restored successfully", "schema_version": db.get_schema_version()}
+
+
+# ── Tool Connection Endpoints ────────────────────────────────────────────────
+
+
+def _find_sidecar_binary() -> Optional[str]:
+    """
+    Locate the brian-backend sidecar binary.
+    
+    Tauri places externalBin sidecars in Contents/MacOS/ (next to the main
+    Tauri binary), stripping the platform-triple suffix:
+        Brian.app/Contents/MacOS/brian-backend
+    
+    Challenge: this code runs inside a PyInstaller onefile binary.  At runtime
+    PyInstaller extracts to a temp dir, so sys.executable points to e.g.
+    /var/folders/.../brian-backend — NOT the original .app bundle path.
+    
+    Solution: use macOS proc_pidpath() to resolve our own real binary path,
+    then look for the sidecar next to it.
+    
+    Returns the absolute path to the sidecar binary, or None if not found.
+    """
+    import os
+    import sys
+    import platform
+    from pathlib import Path
+    
+    sidecar_name = "brian-backend"
+    
+    # Also build the triple-suffixed name for dev/build locations
+    machine = platform.machine().lower()
+    arch = "aarch64" if machine in ("arm64", "aarch64") else "x86_64"
+    triple = f"{arch}-apple-darwin"
+    sidecar_name_triple = f"brian-backend-{triple}"
+    
+    candidates = []
+    
+    # 1. Use macOS proc_pidpath to get our REAL binary path (not the temp
+    #    extraction path that PyInstaller sets in sys.executable).
+    #    This is the most reliable method inside a .app bundle.
+    try:
+        import ctypes
+        import ctypes.util
+        libc = ctypes.CDLL(ctypes.util.find_library("c"))
+        PROC_PIDPATHINFO_MAXSIZE = 4096
+        buf = ctypes.create_string_buffer(PROC_PIDPATHINFO_MAXSIZE)
+        ret = libc.proc_pidpath(os.getpid(), buf, PROC_PIDPATHINFO_MAXSIZE)
+        if ret > 0:
+            real_exe = Path(buf.value.decode())
+            # The sidecar sits next to us in Contents/MacOS/
+            candidate = real_exe.parent / sidecar_name
+            if candidate.exists():
+                candidates.append(str(candidate))
+    except Exception:
+        pass
+    
+    # 2. Check via sys.argv[0] — Tauri may pass the full .app path
+    argv0 = Path(sys.argv[0]).resolve() if sys.argv else None
+    if argv0 and argv0.parent.name == "MacOS":
+        candidate = argv0.parent / sidecar_name
+        if candidate.exists() and str(candidate) not in candidates:
+            candidates.append(str(candidate))
+    
+    # 3. Walk up from sys.executable (works if not PyInstaller temp-extracted)
+    exe = Path(sys.executable).resolve()
+    if exe.parent.name == "MacOS":
+        candidate = exe.parent / sidecar_name
+        if candidate.exists() and str(candidate) not in candidates:
+            candidates.append(str(candidate))
+    
+    # 4. Check /Applications install location
+    app_binary = Path("/Applications/Brian.app/Contents/MacOS") / sidecar_name
+    if app_binary.exists() and str(app_binary) not in candidates:
+        candidates.append(str(app_binary))
+    
+    # 5. Check ~/Applications (some users install there)
+    home_app = Path.home() / "Applications" / "Brian.app" / "Contents" / "MacOS" / sidecar_name
+    if home_app.exists() and str(home_app) not in candidates:
+        candidates.append(str(home_app))
+    
+    # 6. Check the dev/build location (triple-suffixed)
+    dev_binary = Path(__file__).resolve().parents[2] / "src-tauri" / "binaries" / sidecar_name_triple
+    if dev_binary.exists() and str(dev_binary) not in candidates:
+        candidates.append(str(dev_binary))
+    
+    return candidates[0] if candidates else None
+
+
+def _get_mcp_command() -> tuple:
+    """
+    Determine the best command + args to run Brian as an MCP stdio server.
+    
+    Prefers the sidecar binary (no Python dependency needed), falls back to
+    system Python + pip install.
+    
+    Returns (command: str, args: list[str], needs_pip_install: bool)
+    """
+    import shutil
+    from pathlib import Path
+    
+    # Prefer the sidecar binary — works in signed .app without system Python
+    sidecar = _find_sidecar_binary()
+    if sidecar:
+        return (sidecar, ["--mcp"], False)
+    
+    # Fallback: find a system Python
+    python_bin = None
+    for candidate in [
+        shutil.which("python3"),
+        shutil.which("python"),
+        "/opt/homebrew/bin/python3",
+        "/usr/local/bin/python3",
+        "/usr/bin/python3",
+    ]:
+        if candidate and Path(candidate).exists():
+            python_bin = candidate
+            break
+    
+    if python_bin:
+        return (python_bin, ["-m", "brian_mcp.server"], True)
+    
+    return (None, [], False)
+
+
+@router.post("/tools/connect")
+async def connect_tool(data: dict):
+    """Connect Brian as an MCP server to an AI tool by writing its config file."""
+    import json
+    from pathlib import Path
+    
+    tool = data.get("tool")
+    if not tool:
+        raise HTTPException(status_code=400, detail="Missing 'tool' field")
+    
+    brian_db = str(Path.home() / ".brian" / "brian.db")
+    
+    cmd, args, needs_install = _get_mcp_command()
+    if not cmd:
+        raise HTTPException(
+            status_code=500,
+            detail="Could not find sidecar binary or Python interpreter"
+        )
+    
+    # Only pip-install when falling back to system Python
+    if needs_install:
+        _ensure_brian_installed(cmd)
+    
+    if tool == "goose":
+        return _connect_goose(cmd, args, brian_db)
+    elif tool == "claude":
+        return _connect_claude(cmd, args, brian_db)
+    elif tool == "cursor":
+        return _connect_cursor(cmd, args, brian_db)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown tool: {tool}")
+
+
+@router.post("/tools/auto-connect")
+async def auto_connect_tools():
+    """
+    Automatically configure Brian MCP for all detected AI tools.
+    
+    Called during onboarding — silently writes config for every tool whose
+    config directory exists (i.e. the tool is installed).  Uses the sidecar
+    binary so no pip install or system Python is needed.
+    """
+    from pathlib import Path
+    
+    brian_db = str(Path.home() / ".brian" / "brian.db")
+    
+    cmd, args, needs_install = _get_mcp_command()
+    if not cmd:
+        raise HTTPException(
+            status_code=500,
+            detail="Could not find sidecar binary or Python interpreter"
+        )
+    
+    if needs_install:
+        try:
+            _ensure_brian_installed(cmd)
+        except Exception:
+            pass  # Best-effort during onboarding
+    
+    results = {}
+    
+    # Goose — always configure (creates config dir if needed)
+    try:
+        results["goose"] = _connect_goose(cmd, args, brian_db)
+    except Exception as e:
+        results["goose"] = {"status": "error", "detail": str(e)}
+    
+    # Claude Desktop — only if the app is installed
+    claude_support = Path.home() / "Library" / "Application Support" / "Claude"
+    if claude_support.exists():
+        try:
+            results["claude"] = _connect_claude(cmd, args, brian_db)
+        except Exception as e:
+            results["claude"] = {"status": "error", "detail": str(e)}
+    else:
+        results["claude"] = {"status": "skipped", "detail": "Claude Desktop not installed"}
+    
+    # Cursor — only if installed
+    cursor_dir = Path.home() / ".cursor"
+    if cursor_dir.exists():
+        try:
+            results["cursor"] = _connect_cursor(cmd, args, brian_db)
+        except Exception as e:
+            results["cursor"] = {"status": "error", "detail": str(e)}
+    else:
+        results["cursor"] = {"status": "skipped", "detail": "Cursor not installed"}
+    
+    return {
+        "auto_connect": True,
+        "mcp_command": cmd,
+        "mcp_args": args,
+        "using_sidecar": not needs_install,
+        "results": results,
+    }
+
+
+@router.get("/tools/status")
+async def get_tool_status():
+    """Check which AI tools have Brian configured."""
+    import yaml
+    import json
+    from pathlib import Path
+    
+    status = {}
+    
+    # Goose
+    goose_config = Path.home() / ".config" / "goose" / "config.yaml"
+    try:
+        if goose_config.exists():
+            with open(goose_config) as f:
+                cfg = yaml.safe_load(f)
+            exts = cfg.get("extensions", {})
+            status["goose"] = "brian" in exts and exts["brian"].get("enabled", False)
+        else:
+            status["goose"] = False
+    except Exception:
+        status["goose"] = False
+    
+    # Claude Desktop
+    claude_config = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+    try:
+        if claude_config.exists():
+            with open(claude_config) as f:
+                cfg = json.load(f)
+            servers = cfg.get("mcpServers", {})
+            status["claude"] = "brian" in servers
+        else:
+            status["claude"] = False
+    except Exception:
+        status["claude"] = False
+    
+    # Cursor
+    cursor_config = Path.home() / ".cursor" / "mcp.json"
+    try:
+        if cursor_config.exists():
+            with open(cursor_config) as f:
+                cfg = json.load(f)
+            servers = cfg.get("mcpServers", {})
+            status["cursor"] = "brian" in servers
+        else:
+            status["cursor"] = False
+    except Exception:
+        status["cursor"] = False
+    
+    return status
+
+
+@router.get("/tools/mcp-info")
+async def get_mcp_info():
+    """Return info about the MCP server command for manual configuration."""
+    from pathlib import Path
+    
+    cmd, args, needs_install = _get_mcp_command()
+    brian_db = str(Path.home() / ".brian" / "brian.db")
+    
+    return {
+        "command": cmd,
+        "args": args,
+        "using_sidecar": not needs_install,
+        "env": {"BRIAN_DB_PATH": brian_db},
+    }
+
+
+def _connect_goose(cmd: str, args: list, brian_db: str) -> dict:
+    """Add Brian extension to Goose config.yaml."""
+    import yaml
+    from pathlib import Path
+    
+    config_path = Path.home() / ".config" / "goose" / "config.yaml"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    cfg = {}
+    if config_path.exists():
+        with open(config_path) as f:
+            cfg = yaml.safe_load(f) or {}
+    
+    if "extensions" not in cfg:
+        cfg["extensions"] = {}
+    
+    cfg["extensions"]["brian"] = {
+        "enabled": True,
+        "type": "stdio",
+        "name": "Brian",
+        "description": "Personal knowledge base with semantic search",
+        "cmd": cmd,
+        "args": args,
+        "envs": {"BRIAN_DB_PATH": brian_db},
+        "env_keys": [],
+        "timeout": 300,
+    }
+    
+    with open(config_path, "w") as f:
+        yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
+    
+    return {"tool": "goose", "status": "connected", "config_path": str(config_path)}
+
+
+def _connect_claude(cmd: str, args: list, brian_db: str) -> dict:
+    """Add Brian MCP server to Claude Desktop config."""
+    import json
+    from pathlib import Path
+    
+    config_path = Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    cfg = {}
+    if config_path.exists():
+        with open(config_path) as f:
+            cfg = json.load(f)
+    
+    if "mcpServers" not in cfg:
+        cfg["mcpServers"] = {}
+    
+    cfg["mcpServers"]["brian"] = {
+        "command": cmd,
+        "args": args,
+        "env": {"BRIAN_DB_PATH": brian_db},
+    }
+    
+    with open(config_path, "w") as f:
+        json.dump(cfg, f, indent=2)
+    
+    return {"tool": "claude", "status": "connected", "config_path": str(config_path)}
+
+
+def _connect_cursor(cmd: str, args: list, brian_db: str) -> dict:
+    """Add Brian MCP server to Cursor config."""
+    import json
+    from pathlib import Path
+    
+    config_path = Path.home() / ".cursor" / "mcp.json"
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    cfg = {}
+    if config_path.exists():
+        with open(config_path) as f:
+            cfg = json.load(f)
+    
+    if "mcpServers" not in cfg:
+        cfg["mcpServers"] = {}
+    
+    cfg["mcpServers"]["brian"] = {
+        "command": cmd,
+        "args": args,
+        "env": {"BRIAN_DB_PATH": brian_db},
+    }
+    
+    with open(config_path, "w") as f:
+        json.dump(cfg, f, indent=2)
+    
+    return {"tool": "cursor", "status": "connected", "config_path": str(config_path)}
+
+
+def _ensure_brian_installed(python_bin: str):
+    """Install brian package from GitHub if not already available (fallback for system Python)."""
+    import subprocess
+    
+    # Check if brian_mcp is importable
+    result = subprocess.run(
+        [python_bin, "-c", "import brian_mcp"],
+        capture_output=True, timeout=10
+    )
+    
+    if result.returncode == 0:
+        return True  # Already installed
+    
+    # Install from GitHub
+    print("Installing brian MCP server...")
+    result = subprocess.run(
+        [python_bin, "-m", "pip", "install", 
+         "git+https://github.com/spencrmartin/brian.git"],
+        capture_output=True, timeout=120
+    )
+    
+    if result.returncode != 0:
+        stderr = result.stderr.decode() if result.stderr else ""
+        print(f"  ✗ pip install failed: {stderr[:200]}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to install brian MCP server. Run manually: pip3 install git+https://github.com/spencrmartin/brian.git"
+        )
+    
+    # Verify it installed
+    verify = subprocess.run(
+        [python_bin, "-c", "import brian_mcp; print('ok')"],
+        capture_output=True, timeout=10
+    )
+    if verify.returncode != 0:
+        raise HTTPException(
+            status_code=500,
+            detail="brian_mcp installed but failed to import. Check Python environment."
+        )
+    
+    print("  ✓ brian MCP server installed")
+    return True

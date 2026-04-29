@@ -187,16 +187,66 @@ class KnowledgeRepository:
         return cursor.rowcount > 0
     
     def search(self, query_text: str, limit: int = 50, project_id: Optional[str] = None) -> List[KnowledgeItem]:
-        """Full-text search across knowledge items"""
+        """Full-text search across knowledge items.
+        
+        Uses FTS5 when available, falls back to LIKE-based search otherwise.
+        """
+        if self._fts5_available():
+            return self._search_fts5(query_text, limit, project_id)
+        else:
+            return self._search_like(query_text, limit, project_id)
+
+    def _fts5_available(self) -> bool:
+        """Check if the FTS5 virtual table exists and is usable."""
+        try:
+            import sqlite3
+            conn = sqlite3.connect(self.db.db_path)
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='knowledge_search'"
+            )
+            result = cursor.fetchone()
+            conn.close()
+            return result is not None
+        except Exception:
+            return False
+
+    @staticmethod
+    def _sanitize_fts5_query(query_text: str) -> str:
+        """
+        Sanitize a user query for FTS5 MATCH syntax.
+        
+        FTS5 MATCH is strict:
+        - Special chars like +, -, *, ", (, ) are syntax operators
+        - Multiple words use implicit AND (all must match)
+        - Stop words / short tokens may not be indexed
+        
+        Strategy: strip special chars, split into tokens, join with OR
+        so partial matches are returned instead of nothing.
+        """
+        import re
+        # Strip FTS5 special characters
+        cleaned = re.sub(r'[+\-*"(){}[\]^~:!@#$%&=<>|\\/?.,;]', ' ', query_text)
+        # Split into tokens, filter short/empty ones
+        tokens = [t.strip() for t in cleaned.split() if len(t.strip()) >= 2]
+        if not tokens:
+            return query_text.strip()
+        # Use OR so any matching token returns results, add * prefix matching
+        # e.g. "MCP server setup" → "MCP* OR server* OR setup*"
+        return ' OR '.join(f'{t}*' for t in tokens)
+
+    def _search_fts5(self, query_text: str, limit: int = 50, project_id: Optional[str] = None) -> List[KnowledgeItem]:
+        """Full-text search using FTS5 virtual table."""
         import sqlite3
         
         # Create a fresh connection for FTS queries to avoid the initialize() issue
-        # The Database wrapper's connection gets corrupted after initialize() is called
         conn = sqlite3.connect(self.db.db_path)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        # First, search the FTS table to get matching item IDs
+        # Sanitize query for FTS5 — use OR + prefix matching for better recall
+        fts_query_text = self._sanitize_fts5_query(query_text)
+        
         fts_query = """
             SELECT id, rank 
             FROM knowledge_search 
@@ -204,18 +254,23 @@ class KnowledgeRepository:
             ORDER BY rank
             LIMIT ?
         """
-        cursor.execute(fts_query, (query_text, limit))
-        fts_rows = cursor.fetchall()
-        conn.close()
+        try:
+            cursor.execute(fts_query, (fts_query_text, limit))
+            fts_rows = cursor.fetchall()
+        except sqlite3.OperationalError:
+            # If the sanitized query still fails, fall back to LIKE search
+            conn.close()
+            return self._search_like(query_text, limit, project_id)
+        finally:
+            conn.close()
         
         if not fts_rows:
-            return []
+            # FTS5 returned nothing — fall back to LIKE search for broader matching
+            return self._search_like(query_text, limit, project_id)
         
-        # Get the full item details for matching IDs using the regular db connection
         item_ids = [row['id'] for row in fts_rows]
         placeholders = ','.join('?' * len(item_ids))
         
-        # Build query with optional project_id filter
         if project_id:
             items_query = f"""
                 SELECT * FROM knowledge_items 
@@ -229,7 +284,6 @@ class KnowledgeRepository:
             """
             rows = self.db.fetchall(items_query, tuple(item_ids))
         
-        # Create a map of id to rank for sorting
         rank_map = {row['id']: idx for idx, row in enumerate(fts_rows)}
         
         items = []
@@ -237,8 +291,34 @@ class KnowledgeRepository:
             tags = self._get_tags_for_item(row['id'])
             items.append(KnowledgeItem.from_db_row(dict(row), tags))
         
-        # Sort by FTS rank
         items.sort(key=lambda item: rank_map.get(item.id, 999))
+        return items
+
+    def _search_like(self, query_text: str, limit: int = 50, project_id: Optional[str] = None) -> List[KnowledgeItem]:
+        """Fallback search using LIKE when FTS5 is unavailable."""
+        like_pattern = f"%{query_text}%"
+        
+        if project_id:
+            query = """
+                SELECT * FROM knowledge_items
+                WHERE (title LIKE ? OR content LIKE ?) AND project_id = ?
+                ORDER BY updated_at DESC
+                LIMIT ?
+            """
+            rows = self.db.fetchall(query, (like_pattern, like_pattern, project_id, limit))
+        else:
+            query = """
+                SELECT * FROM knowledge_items
+                WHERE title LIKE ? OR content LIKE ?
+                ORDER BY updated_at DESC
+                LIMIT ?
+            """
+            rows = self.db.fetchall(query, (like_pattern, like_pattern, limit))
+        
+        items = []
+        for row in rows:
+            tags = self._get_tags_for_item(row['id'])
+            items.append(KnowledgeItem.from_db_row(dict(row), tags))
         
         return items
     
@@ -494,7 +574,8 @@ class RegionRepository:
             query += " AND is_visible = 1"
         
         if project_id:
-            query += " AND project_id = ?"
+            # Include regions for this project AND global regions (no project_id)
+            query += " AND (project_id = ? OR project_id IS NULL)"
             params.append(project_id)
         
         query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"

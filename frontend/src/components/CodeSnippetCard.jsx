@@ -101,13 +101,12 @@ export default function CodeSnippetCard({ item, index }) {
 
   const handleDelete = async (e) => {
     e.stopPropagation()
-    if (confirm('Are you sure you want to delete this snippet?')) {
-      const success = await deleteItem(item.id)
-      if (success) {
-        toast.success('Snippet deleted successfully')
-      } else {
-        toast.error('Failed to delete snippet')
-      }
+    // confirm() is blocked in Tauri's webview — delete directly
+    const success = await deleteItem(item.id)
+    if (success) {
+      toast.success('Snippet deleted successfully')
+    } else {
+      toast.error('Failed to delete snippet')
     }
   }
 
