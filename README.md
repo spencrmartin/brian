@@ -42,6 +42,7 @@
 - **📊 Zoom Indicator**: Real-time display of zoom level and current semantic view
 
 
+
 ### AI Integration
 - **🤖 Goose Integration**: Use Brian directly from Goose AI assistant via MCP
 - **🧭 Region Profiles**: Configure AI behavior per knowledge region
