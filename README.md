@@ -1,208 +1,209 @@
-# 🧠 Brian - Your Personal Knowledge Base
-<img width="303" height="202" alt="Screenshot 2026-02-20 at 4 30 00 PM" src="https://github.com/user-attachments/assets/c5ac10bc-14ce-4113-b116-f40b379c1726" />
+# 🧠 Brian - Votre Base de Connaissances Personnelle
+<img width="303" height="202" alt="Screenshot 2026-02-20 at 4 30 00 PM" src="https://github.com/user-attachments/assets/c5ac10bc-14ce-4113-b116-f40b379c1726" />
 
-> A play on "brain" - Brian is your intelligent knowledge repository with vector-based similarity search, beautiful graph visualization, and seamless Goose integration. Because I cannot spell 9/10 times and I make this mistake all the time now you can too!
-<img width="1528" height="1109" alt="Screenshot 2026-02-19 at 3 35 51 PM" src="https://github.com/user-attachments/assets/5c849425-6c69-4d44-bd11-e19d828272f5" />
+> Un jeu de mots sur "brain" (cerveau) - Brian est votre référentiel de connaissances intelligent avec recherche de similarité vectorielle, visualisation graphique élégante et intégration transparente avec Goose. Parce que je fais des fautes d'orthographe 9 fois sur 10 et que je fais cette erreur tout le temps, maintenant vous pouvez aussi !
+<img width="1528" height="1109" alt="Screenshot 2026-02-19 at 3 35 51 PM" src="https://github.com/user-attachments/assets/5c849425-6c69-4d44-bd11-e19d828272f5" />
 
-<img width="1527" height="1110" alt="Screenshot 2026-02-19 at 3 36 05 PM" src="https://github.com/user-attachments/assets/6de1efb2-5059-49e7-81a9-6b1999f6f147" />
-
-
-
-## ✨ Features
-
-### Core Knowledge Management
-- **📚 Knowledge Items**: Store links, notes, code snippets, and papers
-- **🔍 Smart Search**: Full-text search with FTS5 + TF-IDF vector similarity
-- **🏷️ Tagging System**: Organize items with tags for easy filtering
-- **🔗 Link Previews**: Automatic metadata extraction from URLs
-- **📄 Google Docs Support**: Seamless integration with Google Drive documents
-
-<img width="824" height="758" alt="Screenshot 2026-02-04 at 12 32 03 PM" src="https://github.com/user-attachments/assets/780881d8-84b3-43ef-8a84-2626302d8fbf" />
+<img width="1527" height="1110" alt="Screenshot 2026-02-19 at 3 36 05 PM" src="https://github.com/user-attachments/assets/6de1efb2-5059-49e7-81a9-6b1999f6f147" />
 
 
-### Multi-Project Knowledge Bases
-- **🗂️ Multiple Projects**: Organize knowledge into separate project spaces
 
-<img width="341" height="468" alt="Screenshot 2026-02-04 at 12 31 45 PM" src="https://github.com/user-attachments/assets/398433a8-21ed-40f9-b280-198bb0be0da7" />
+## ✨ Fonctionnalités
 
+### Gestion des Connaissances
 
-### Graph Visualization
-- **🕸️ Force-Directed Graph**: Interactive D3.js visualization showing connections
-- **🎨 Theme Highlighting**: Hover over tags to see themed connections with colored drop shadows
-- **🔍 Semantic Zoom**: Smooth transitions between project, region, and item views
-- **🌌 Knowledge Universe**: Zoom out to see all projects as "galaxies" in a unified space
-- **📍 Knowledge Regions**: Group related items with visual boundaries
+- **📚 Éléments de Connaissance**: Stockez des liens, notes, extraits de code et articles
+- **🔍 Recherche Intelligente**: Recherche plein texte avec FTS5 + similarité vectorielle TF-IDF
+- **🏷️ Système de Tags**: Organisez les éléments avec des tags pour un filtrage facile
+- **🔗 Aperçus de Liens**: Extraction automatique des métadonnées depuis les URLs
+- **📄 Support Google Docs**: Intégration transparente avec les documents Google Drive
 
-<img width="1631" height="907" alt="Screenshot 2026-02-04 at 12 31 10 PM" src="https://github.com/user-attachments/assets/334cb713-1881-4a50-af62-28128d1dc9c8" />
-
-### Hierarchical Zoom (Knowledge Universe)
-- **🔭 Multi-Scale View**: Seamlessly zoom from individual items to entire knowledge universe
-- **🪐 Project Hulls**: Visual boundaries around project clusters when zoomed out
-- **✨ Semantic Rendering**: Labels, nodes, and links adapt based on zoom level
-- **📊 Zoom Indicator**: Real-time display of zoom level and current semantic view
+<img width="824" height="758" alt="Screenshot 2026-02-04 at 12 32 03 PM" src="https://github.com/user-attachments/assets/780881d8-84b3-43ef-8a84-2626302d8fbf" />
 
 
-### AI Integration
-- **🤖 Goose Integration**: Use Brian directly from Goose AI assistant via MCP
-- **🧭 Region Profiles**: Configure AI behavior per knowledge region
-- **💡 Smart Context**: Get relevant knowledge context for any topic
+### Bases de Connaissances Multi-Projets
+- **🗂️ Projets Multiples**: Organisez les connaissances dans des espaces de projet séparés
 
-<img width="609" height="779" alt="Screenshot 2026-02-04 at 12 32 30 PM" src="https://github.com/user-attachments/assets/f89a48bd-c61f-4b53-bb4b-347ed6d612d3" />
+<img width="341" height="468" alt="Screenshot 2026-02-04 at 12 31 45 PM" src="https://github.com/user-attachments/assets/398433a8-21ed-40f9-b280-198bb0be0da7" />
 
 
-## 🚀 Quick Start
+### Visualisation Graphique
+- **🕸️ Graphe à Forces Dirigées**: Visualisation interactive D3.js montrant les connexions
+- **🎨 Mise en Évidence par Thème**: Survolez les tags pour voir les connexions thématiques avec des ombres colorées
+- **🔍 Zoom Sémantique**: Transitions fluides entre les vues projet, région et élément
+- **🌌 Univers de Connaissances**: Dézoomez pour voir tous les projets comme des "galaxies" dans un espace unifié
+- **📍 Régions de Connaissances**: Regroupez les éléments liés avec des délimitations visuelles
 
-### Prerequisites
+<img width="1631" height="907" alt="Screenshot 2026-02-04 at 12 31 10 PM" src="https://github.com/user-attachments/assets/334cb713-1881-4a50-af62-28128d1dc9c8" />
 
-- **Python 3.8+** - [Download](https://www.python.org/downloads/)
-- **Node.js 16+** - [Download](https://nodejs.org/)
-- **pnpm** - [Install](https://pnpm.io/installation) (`npm install -g pnpm`)
-- **Goose** (optional) - For AI assistant integration - https://github.com/block/goose 
+### Zoom Hiérarchique (Univers de Connaissances)
+- **🔭 Vue Multi-Échelle**: Zoomez de manière fluide des éléments individuels à l'univers de connaissances entier
+- **🪐 Enveloppes de Projet**: Délimitations visuelles autour des clusters de projets lors du dézoom
+- **✨ Rendu Sémantique**: Les étiquettes, nœuds et liens s'adaptent selon le niveau de zoom
+- **📊 Indicateur de Zoom**: Affichage en temps réel du niveau de zoom et de la vue sémantique actuelle
 
-### One-Command Installation
+
+### Intégration IA
+- **🤖 Intégration Goose**: Utilisez Brian directement depuis l'assistant IA Goose via MCP
+- **🧭 Profils de Région**: Configurez le comportement de l'IA par région de connaissances
+- **💡 Contexte Intelligent**: Obtenez un contexte de connaissances pertinent pour n'importe quel sujet
+
+<img width="609" height="779" alt="Screenshot 2026-02-04 at 12 32 30 PM" src="https://github.com/user-attachments/assets/f89a48bd-c61f-4b53-bb4b-347ed6d612d3" />
+
+
+## 🚀 Démarrage Rapide
+
+### Prérequis
+
+- **Python 3.8+** - [Télécharger](https://www.python.org/downloads/)
+- **Node.js 16+** - [Télécharger](https://nodejs.org/)
+- **pnpm** - [Installer](https://pnpm.io/installation) (`npm install -g pnpm`)
+- **Goose** (optionnel) - Pour l'intégration avec l'assistant IA - https://github.com/block/goose
+
+### Installation en Une Commande
 
 ```bash
-# Clone the repository
+# Cloner le dépôt
 git clone https://github.com/yourusername/brian.git
 cd brian
 
-# Run the setup script
+# Lancer le script d'installation
 ./setup.sh
 ```
 
-That's it! The setup script will:
-- ✅ Install all Python dependencies
-- ✅ Install all frontend dependencies
-- ✅ Create the Brian data directory
-- ✅ Configure the Goose extension automatically
-- ✅ Create convenient start/stop scripts
+C'est tout ! Le script d'installation va :
+- ✅ Installer toutes les dépendances Python
+- ✅ Installer toutes les dépendances frontend
+- ✅ Créer le répertoire de données Brian
+- ✅ Configurer l'extension Goose automatiquement
+- ✅ Créer des scripts de démarrage/arrêt pratiques
 
-### Start Brian
+### Démarrer Brian
 
 ```bash
 ./start.sh
 ```
 
-This starts both the backend (port 8080) and frontend (port 5173) servers.
+Cela démarre à la fois le backend (port 8080) et le frontend (port 5173).
 
-Open your browser to: **http://localhost:5173**
+Ouvrez votre navigateur sur : **http://localhost:5173**
 
-### Stop Brian
+### Arrêter Brian
 
 ```bash
 ./stop.sh
 ```
 
-## 📖 Usage
+## 📖 Utilisation
 
-### Adding Knowledge Items
+### Ajouter des Éléments de Connaissance
 
-**Via Web UI:**
-1. Open http://localhost:5173
-2. Click the "+" button
-3. Choose item type (link, note, snippet, paper)
-4. Fill in the details and add tags
-5. Save!
+**Via l'Interface Web :**
+1. Ouvrez http://localhost:5173
+2. Cliquez sur le bouton "+"
+3. Choisissez le type d'élément (lien, note, extrait, article)
+4. Remplissez les détails et ajoutez des tags
+5. Enregistrez !
 
-**Via Goose:**
+**Via Goose :**
 ```
-You: Add this link to Brian: https://example.com with tags "ai, research"
-Goose: ✓ Added to your knowledge base!
+Vous : Ajoute ce lien à Brian : https://example.com avec les tags "ia, recherche"
+Goose : ✓ Ajouté à votre base de connaissances !
 ```
 
-### Managing Projects
+### Gérer les Projets
 
-**Creating a Project:**
-1. Click the Project Selector at the top center
-2. Click "New Project"
-3. Enter name, description, choose an icon and color
-4. Click Create
+**Créer un Projet :**
+1. Cliquez sur le Sélecteur de Projet en haut au centre
+2. Cliquez sur "Nouveau Projet"
+3. Entrez le nom, la description, choisissez une icône et une couleur
+4. Cliquez sur Créer
 
-**Switching Projects:**
-- Click the Project Selector and choose a project
-- Select "All Projects" to view everything across all knowledge bases
+**Changer de Projet :**
+- Cliquez sur le Sélecteur de Projet et choisissez un projet
+- Sélectionnez "Tous les Projets" pour tout voir à travers toutes les bases de connaissances
 
-**Editing Projects:**
-- Hover over a project in the selector and click the edit (pencil) icon
-- Change the name, description, icon, or color
+**Modifier des Projets :**
+- Survolez un projet dans le sélecteur et cliquez sur l'icône de modification (crayon)
+- Changez le nom, la description, l'icône ou la couleur
 
-### Graph Visualization
+### Visualisation Graphique
 
-The graph view shows connections between items based on content similarity:
+La vue graphique montre les connexions entre les éléments basées sur la similarité de contenu :
 
-- **Node Colors**: Blue (links), Green (notes), Amber (snippets), Purple (papers)
-- **Line Thickness**: Indicates similarity strength
-- **Theme Highlighting**: Hover over tags to see themed connections
-- **Node Details**: Click any node to see full details in a bottom sheet
-- **Zoom & Pan**: Scroll to zoom, drag to pan
-- **Drag Nodes**: Reposition nodes by dragging
+- **Couleurs des Nœuds**: Bleu (liens), Vert (notes), Ambre (extraits), Violet (articles)
+- **Épaisseur des Lignes**: Indique la force de similarité
+- **Mise en Évidence par Thème**: Survolez les tags pour voir les connexions thématiques
+- **Détails du Nœud**: Cliquez sur n'importe quel nœud pour voir les détails complets dans une feuille inférieure
+- **Zoom & Déplacement**: Défilez pour zoomer, faites glisser pour déplacer
+- **Déplacer les Nœuds**: Repositionnez les nœuds en les faisant glisser
 
-### Knowledge Universe (Hierarchical Zoom)
+### Univers de Connaissances (Zoom Hiérarchique)
 
-When viewing "All Projects", you can explore your entire knowledge universe:
+Lors de l'affichage de "Tous les Projets", vous pouvez explorer tout votre univers de connaissances :
 
-1. **Zoom Out** (scale < 0.3): See all projects as distinct clusters with hull boundaries
-2. **Mid Zoom** (scale 0.3-0.5): See knowledge regions within projects
-3. **Zoom In** (scale > 0.5): See individual items with full labels
+1. **Dézoomer** (échelle < 0.3) : Voir tous les projets comme des clusters distincts avec délimitations
+2. **Zoom Moyen** (échelle 0.3-0.5) : Voir les régions de connaissances au sein des projets
+3. **Zoomer** (échelle > 0.5) : Voir les éléments individuels avec des étiquettes complètes
 
-The zoom indicator in the bottom-left shows your current zoom level and semantic view.
+L'indicateur de zoom en bas à gauche montre votre niveau de zoom actuel et la vue sémantique.
 
-### Knowledge Regions
+### Régions de Connaissances
 
-Regions help organize related items within a project:
+Les régions aident à organiser les éléments liés au sein d'un projet :
 
-1. Click the Regions button in the toolbar
-2. Create a new region with a name and color
-3. Add items to regions by selecting them in the graph
-4. Regions appear as visual boundaries in the graph view
+1. Cliquez sur le bouton Régions dans la barre d'outils
+2. Créez une nouvelle région avec un nom et une couleur
+3. Ajoutez des éléments aux régions en les sélectionnant dans le graphe
+4. Les régions apparaissent comme des délimitations visuelles dans la vue graphique
 
-### Searching
+### Recherche
 
-**Via Web UI:**
-- Use the search bar at the top
-- Results show both exact matches and similar items
-- Filter by type, tags, or project
+**Via l'Interface Web :**
+- Utilisez la barre de recherche en haut
+- Les résultats montrent les correspondances exactes et les éléments similaires
+- Filtrez par type, tags ou projet
 
-**Via Goose:**
+**Via Goose :**
 ```
-You: Search Brian for "machine learning"
-Goose: Found 5 items related to machine learning...
+Vous : Recherche dans Brian "apprentissage automatique"
+Goose : 5 éléments trouvés liés à l'apprentissage automatique...
 ```
 
 ## 🔧 Configuration
 
-### Environment Variables
+### Variables d'Environnement
 
-Create a `.env` file in the project root:
+Créez un fichier `.env` à la racine du projet :
 
 ```bash
-# Database location
+# Emplacement de la base de données
 BRIAN_DB_PATH=~/.brian/brian.db
 
-# API server
+# Serveur API
 BRIAN_HOST=127.0.0.1
 BRIAN_PORT=8080
 BRIAN_DEBUG=false
 
-# Frontend (optional)
-VITE_PORT=5173           # Frontend dev server port (auto-fallback if busy)
-VITE_API_URL=http://127.0.0.1:8080  # Backend API URL for proxy
+# Frontend (optionnel)
+VITE_PORT=5173           # Port du serveur de développement frontend (repli automatique si occupé)
+VITE_API_URL=http://127.0.0.1:8080  # URL de l'API backend pour le proxy
 ```
 
-**Dynamic Port Configuration:**
-- If `VITE_PORT` is busy, the frontend will automatically use the next available port
-- Useful when running multiple instances or when ports are occupied
+**Configuration Dynamique des Ports :**
+- Si `VITE_PORT` est occupé, le frontend utilisera automatiquement le prochain port disponible
+- Utile lors de l'exécution de plusieurs instances ou lorsque des ports sont occupés
 
-### Goose Integration
+### Intégration Goose
 
-The setup script automatically configures Goose. The configuration is added to `~/.config/goose/config.yaml`:
+Le script d'installation configure Goose automatiquement. La configuration est ajoutée à `~/.config/goose/config.yaml` :
 
 ```yaml
 extensions:
   brian:
     provider: mcp
     config:
-      command: "/path/to/brian/venv/bin/python"
+      command: "/chemin/vers/brian/venv/bin/python"
       args:
         - "-m"
         - "brian_mcp.server"
@@ -210,413 +211,413 @@ extensions:
         BRIAN_DB_PATH: "~/.brian/brian.db"
 ```
 
-**After setup, restart Goose to load the Brian extension.**
+**Après l'installation, redémarrez Goose pour charger l'extension Brian.**
 
-## 🛠️ Development
+## 🛠️ Développement
 
-### Manual Setup
+### Installation Manuelle
 
-If you prefer manual installation:
+Si vous préférez une installation manuelle :
 
 ```bash
-# Backend setup
+# Configuration du backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -e .
 
-# Frontend setup
+# Configuration du frontend
 cd frontend
 pnpm install
 
-# Start backend
+# Démarrer le backend
 python -m brian.main
 
-# Start frontend (in another terminal)
+# Démarrer le frontend (dans un autre terminal)
 cd frontend
 pnpm dev
 ```
 
-### Project Structure
+### Structure du Projet
 
 ```
 brian/
-├── brian/                  # Backend Python package
-│   ├── api/               # FastAPI routes
-│   ├── database/          # SQLite database layer
-│   │   ├── migrations.py  # Database migrations
-│   │   ├── repository.py  # Data access layer
-│   │   └── schema.py      # Database schema
-│   ├── models/            # Data models
+├── brian/                  # Package Python backend
+│   ├── api/               # Routes FastAPI
+│   ├── database/          # Couche de base de données SQLite
+│   │   ├── migrations.py  # Migrations de base de données
+│   │   ├── repository.py  # Couche d'accès aux données
+│   │   └── schema.py      # Schéma de base de données
+│   ├── models/            # Modèles de données
 │   │   └── knowledge_item.py
-│   └── services/          # Business logic
-│       ├── similarity.py  # Similarity calculations
-│       └── clustering.py  # Item clustering
-├── brian_mcp/             # MCP server for Goose integration
-├── frontend/              # React frontend
+│   └── services/          # Logique métier
+│       ├── similarity.py  # Calculs de similarité
+│       └── clustering.py  # Clustering d'éléments
+├── brian_mcp/             # Serveur MCP pour l'intégration Goose
+├── frontend/              # Frontend React
 │   └── src/
-│       ├── components/    # React components
-│       │   ├── SimilarityGraph.jsx    # Main graph visualization
-│       │   ├── ProjectSelector.jsx    # Project management UI
-│       │   ├── ProjectPill.jsx        # Project indicator component
-│       │   ├── Timeline.jsx           # Chronological view
-│       │   ├── InfinitePinboard.jsx   # Spatial canvas
-│       │   ├── RegionEditDialog.jsx   # Region management
-│       │   └── Settings.jsx           # App settings
-│       ├── contexts/      # React contexts
+│       ├── components/    # Composants React
+│       │   ├── SimilarityGraph.jsx    # Visualisation graphique principale
+│       │   ├── ProjectSelector.jsx    # Interface de gestion des projets
+│       │   ├── ProjectPill.jsx        # Composant indicateur de projet
+│       │   ├── Timeline.jsx           # Vue chronologique
+│       │   ├── InfinitePinboard.jsx   # Canevas spatial
+│       │   ├── RegionEditDialog.jsx   # Gestion des régions
+│       │   └── Settings.jsx           # Paramètres de l'application
+│       ├── contexts/      # Contextes React
 │       │   └── SettingsContext.jsx
-│       ├── store/         # State management
-│       │   └── useStore.js  # Zustand store
-│       └── lib/           # Utilities
-├── setup.sh               # One-command installation
-├── start.sh               # Start both servers
-└── stop.sh                # Stop both servers
+│       ├── store/         # Gestion d'état
+│       │   └── useStore.js  # Store Zustand
+│       └── lib/           # Utilitaires
+├── setup.sh               # Installation en une commande
+├── start.sh               # Démarrer les deux serveurs
+└── stop.sh                # Arrêter les deux serveurs
 ```
 
-### Running Tests
+### Exécuter les Tests
 
 ```bash
-# Activate virtual environment
+# Activer l'environnement virtuel
 source venv/bin/activate
 
-# Run Python tests
+# Exécuter les tests Python
 pytest
 
-# Test MCP server
+# Tester le serveur MCP
 python test_mcp_simple.py
 
-# Test search functionality
+# Tester la fonctionnalité de recherche
 python test_search_fix.py
 ```
 
-## 🎨 UI Features
+## 🎨 Fonctionnalités de l'Interface
 
-### Project Selector
-- Large pill-shaped button at top center
-- Shows current project with icon, name, and item count
-- "All Projects" mode shows universe icon with total counts
-- Dropdown with all projects, create new, and edit options
-- 25+ Lucide icons to choose from
+### Sélecteur de Projet
+- Grand bouton en forme de pilule en haut au centre
+- Affiche le projet actuel avec icône, nom et nombre d'éléments
+- Le mode "Tous les Projets" affiche l'icône univers avec les totaux
+- Menu déroulant avec tous les projets, créer nouveau et options de modification
+- Plus de 25 icônes Lucide au choix
 
-### Timeline View
-- Chronological display of all items
-- Grouped by date
-- Project pills showing item origin
-- Theme lines connecting related items
-- Smooth animations
+### Vue Chronologique
+- Affichage chronologique de tous les éléments
+- Groupés par date
+- Pilules de projet montrant l'origine de l'élément
+- Lignes thématiques reliant les éléments liés
+- Animations fluides
 
-### Graph View
-- Force-directed layout with D3.js
-- Real-time similarity calculations
-- Interactive node selection
-- Theme-based filtering with drop shadows
-- Bottom sheet for detailed view with project pills
-- Pulsing animation on selected nodes
-- **Hierarchical zoom** with semantic rendering
-- **Project hulls** when viewing all projects
-- **Zoom indicator** showing current level
+### Vue Graphique
+- Disposition à forces dirigées avec D3.js
+- Calculs de similarité en temps réel
+- Sélection interactive des nœuds
+- Filtrage par thème avec ombres portées
+- Feuille inférieure pour vue détaillée avec pilules de projet
+- Animation pulsante sur les nœuds sélectionnés
+- **Zoom hiérarchique** avec rendu sémantique
+- **Enveloppes de projet** lors de l'affichage de tous les projets
+- **Indicateur de zoom** montrant le niveau actuel
 
 ### Navigation
-- Circular icon buttons matching modern UI patterns
-- Smooth transitions between views
-- Responsive design
-- Keyboard shortcuts (coming soon)
+- Boutons icônes circulaires correspondant aux modèles d'interface modernes
+- Transitions fluides entre les vues
+- Design responsive
+- Raccourcis clavier (à venir)
 
-## 🔌 Goose MCP Tools
+## 🔌 Outils MCP Goose
 
-When integrated with Goose, Brian provides these tools:
+Lors de l'intégration avec Goose, Brian fournit ces outils :
 
-### Knowledge Management
+### Gestion des Connaissances
 
 #### `create_knowledge_item`
-Add new items to your knowledge base.
+Ajouter de nouveaux éléments à votre base de connaissances.
 ```
-Parameters:
-- title: Item title
-- content: Main content
-- item_type: link, note, snippet, or paper
-- url: Optional URL
-- tags: Optional list of tags
-- project_id: Optional project to add to
+Paramètres :
+- title: Titre de l'élément
+- content: Contenu principal
+- item_type: lien, note, extrait ou article
+- url: URL optionnelle
+- tags: Liste de tags optionnelle
+- project_id: Projet optionnel où ajouter
 ```
 
 #### `search_knowledge`
-Search your knowledge base with full-text and similarity search.
+Recherchez dans votre base de connaissances avec la recherche plein texte et par similarité.
 ```
-Parameters:
-- query: Search query
-- limit: Max results (default: 10)
-- project_id: Optional project filter
+Paramètres :
+- query: Requête de recherche
+- limit: Nombre maximum de résultats (défaut : 10)
+- project_id: Filtre de projet optionnel
 ```
 
 #### `find_similar_items`
-Find items similar to a given item.
+Trouvez des éléments similaires à un élément donné.
 ```
-Parameters:
-- item_id: UUID of the reference item
-- limit: Max results (default: 5)
+Paramètres :
+- item_id: UUID de l'élément de référence
+- limit: Nombre maximum de résultats (défaut : 5)
 ```
 
 #### `get_item_details`
-Get full details of a specific item.
+Obtenez les détails complets d'un élément spécifique.
 ```
-Parameters:
-- item_id: UUID of the item
+Paramètres :
+- item_id: UUID de l'élément
 ```
 
 #### `update_knowledge_item`
-Update an existing knowledge item's content, tags, or other properties.
+Mettez à jour le contenu, les tags ou d'autres propriétés d'un élément de connaissance existant.
 ```
-Parameters:
-- item_id: UUID of the item to update
-- title: Optional new title
-- content: Optional new content
-- tags: Optional new tags list
-- url: Optional new URL
+Paramètres :
+- item_id: UUID de l'élément à mettre à jour
+- title: Nouveau titre optionnel
+- content: Nouveau contenu optionnel
+- tags: Nouvelle liste de tags optionnelle
+- url: Nouvelle URL optionnelle
 ```
 
 #### `delete_knowledge_item`
-Delete a knowledge item from the database. This action cannot be undone.
+Supprimez un élément de connaissance de la base de données. Cette action est irréversible.
 ```
-Parameters:
-- item_id: UUID of the item to delete
+Paramètres :
+- item_id: UUID de l'élément à supprimer
 ```
 
-### Project Management
+### Gestion des Projets
 
 #### `list_projects`
-List all knowledge base projects.
+Lister tous les projets de base de connaissances.
 
 #### `create_project`
-Create a new knowledge base project.
+Créer un nouveau projet de base de connaissances.
 ```
-Parameters:
-- name: Project name
-- description: Optional description
-- icon: Optional emoji icon
-- color: Optional hex color
+Paramètres :
+- name: Nom du projet
+- description: Description optionnelle
+- icon: Icône emoji optionnelle
+- color: Couleur hexadécimale optionnelle
 ```
 
 #### `switch_project`
-Switch the default project for new items.
+Changer le projet par défaut pour les nouveaux éléments.
 ```
-Parameters:
-- project_id: UUID of the project
+Paramètres :
+- project_id: UUID du projet
 ```
 
 #### `get_project_context`
-Get knowledge context from a specific project.
+Obtenir le contexte de connaissances d'un projet spécifique.
 ```
-Parameters:
-- project_id: Optional project ID
-- query: Optional query to filter items
-- limit: Max items (default: 20)
+Paramètres :
+- project_id: ID de projet optionnel
+- query: Requête optionnelle pour filtrer les éléments
+- limit: Nombre maximum d'éléments (défaut : 20)
 ```
 
-### Region Management
+### Gestion des Régions
 
 #### `list_regions`
-List all knowledge regions.
+Lister toutes les régions de connaissances.
 
 #### `create_region`
-Create a new knowledge region.
+Créer une nouvelle région de connaissances.
 ```
-Parameters:
-- name: Region name
-- description: Optional description
-- color: Optional hex color
-- item_ids: Optional items to include
+Paramètres :
+- name: Nom de la région
+- description: Description optionnelle
+- color: Couleur hexadécimale optionnelle
+- item_ids: Éléments optionnels à inclure
 ```
 
 #### `get_region_context`
-Get knowledge context from a specific region.
+Obtenir le contexte de connaissances d'une région spécifique.
 ```
-Parameters:
-- region_id: UUID of the region
-- query: Optional query to filter items
+Paramètres :
+- region_id: UUID de la région
+- query: Requête optionnelle pour filtrer les éléments
 ```
 
-### Context & Intelligence
+### Contexte & Intelligence
 
 #### `get_knowledge_context`
-Get relevant knowledge items for a topic.
+Obtenir des éléments de connaissance pertinents pour un sujet.
 ```
-Parameters:
-- topic: Topic to get context for
-- limit: Max items (default: 5)
+Paramètres :
+- topic: Sujet pour lequel obtenir le contexte
+- limit: Nombre maximum d'éléments (défaut : 5)
 ```
 
 #### `suggest_regions`
-Suggest relevant regions for a query.
+Suggérer des régions pertinentes pour une requête.
 ```
-Parameters:
-- query: Query to find relevant regions
-- limit: Max regions (default: 3)
+Paramètres :
+- query: Requête pour trouver des régions pertinentes
+- limit: Nombre maximum de régions (défaut : 3)
 ```
 
 #### `debug_item_connections`
-Debug similarity connections for an item.
+Déboguer les connexions de similarité pour un élément.
 ```
-Parameters:
-- item_id: UUID of the item to debug
+Paramètres :
+- item_id: UUID de l'élément à déboguer
 ```
 
-### Connection Management
+### Gestion des Connexions
 
-Explicit connections between knowledge items for the graph and relationship tracking.
+Connexions explicites entre les éléments de connaissance pour le graphe et le suivi des relations.
 
 #### `create_connection`
-Create an explicit connection between two items.
+Créer une connexion explicite entre deux éléments.
 ```
-Parameters:
-- source_item_id: UUID of the source item
-- target_item_id: UUID of the target item
-- connection_type: Optional - related, references, extracted_from, inspired_by, etc.
-- strength: Optional - 0.0 to 1.0 (default: 1.0)
-- notes: Optional notes about the connection
+Paramètres :
+- source_item_id: UUID de l'élément source
+- target_item_id: UUID de l'élément cible
+- connection_type: Optionnel - lié, références, extrait_de, inspiré_par, etc.
+- strength: Optionnel - 0.0 à 1.0 (défaut : 1.0)
+- notes: Notes optionnelles sur la connexion
 ```
 
 #### `get_item_connections`
-Get all explicit connections for an item.
+Obtenir toutes les connexions explicites pour un élément.
 ```
-Parameters:
-- item_id: UUID of the item
+Paramètres :
+- item_id: UUID de l'élément
 ```
 
 #### `update_connection`
-Update an existing connection.
+Mettre à jour une connexion existante.
 ```
-Parameters:
-- connection_id: ID of the connection to update
-- connection_type: Optional new type
-- strength: Optional new strength 0.0-1.0
-- notes: Optional new notes
+Paramètres :
+- connection_id: ID de la connexion à mettre à jour
+- connection_type: Nouveau type optionnel
+- strength: Nouvelle force optionnelle 0.0-1.0
+- notes: Nouvelles notes optionnelles
 ```
 
 #### `delete_connection`
-Delete an explicit connection between items.
+Supprimer une connexion explicite entre des éléments.
 ```
-Parameters:
-- connection_id: ID of the connection to delete
+Paramètres :
+- connection_id: ID de la connexion à supprimer
 ```
 
-## 📊 Similarity Algorithm
+## 📊 Algorithme de Similarité
 
-Brian uses a hybrid approach for finding connections:
+Brian utilise une approche hybride pour trouver des connexions :
 
-1. **TF-IDF Vectorization**: Converts text to numerical vectors
-2. **Cosine Similarity**: Measures angle between vectors
-3. **Threshold Filtering**: Only shows connections above 0.15 similarity
-4. **Global IDF Scores**: Pre-computed for all documents
-5. **Project-Aware**: Can filter connections by project
+1. **Vectorisation TF-IDF**: Convertit le texte en vecteurs numériques
+2. **Similarité Cosinus**: Mesure l'angle entre les vecteurs
+3. **Filtrage par Seuil**: Affiche uniquement les connexions au-dessus d'une similarité de 0.15
+4. **Scores IDF Globaux**: Pré-calculés pour tous les documents
+5. **Sensible aux Projets**: Peut filtrer les connexions par projet
 
-This creates meaningful connections between related items without manual linking.
+Cela crée des connexions significatives entre les éléments liés sans liaison manuelle.
 
-## 🐛 Troubleshooting
+## 🐛 Dépannage
 
-### Backend won't start
+### Le backend ne démarre pas
 ```bash
-# Check if port 8080 is in use
+# Vérifiez si le port 8080 est utilisé
 lsof -i :8080
 
-# Check logs
+# Vérifiez les logs
 tail -f backend.log
 ```
 
-### Frontend won't start
+### Le frontend ne démarre pas
 ```bash
-# Check if port 5173 is in use
+# Vérifiez si le port 5173 est utilisé
 lsof -i :5173
 
-# Check logs
+# Vérifiez les logs
 tail -f frontend.log
 
-# Reinstall dependencies
+# Réinstallez les dépendances
 cd frontend && pnpm install
 ```
 
-### Goose doesn't see Brian extension
+### Goose ne voit pas l'extension Brian
 ```bash
-# Verify config
+# Vérifiez la configuration
 cat ~/.config/goose/config.yaml
 
-# Check Python path is correct
-which python  # Should be inside brian/venv/bin/
+# Vérifiez que le chemin Python est correct
+which python  # Devrait être dans brian/venv/bin/
 
-# Restart Goose
+# Redémarrez Goose
 ```
 
-### Database issues
+### Problèmes de base de données
 ```bash
-# Check database exists
+# Vérifiez que la base de données existe
 ls -la ~/.brian/brian.db
 
-# Reset database (WARNING: deletes all data)
+# Réinitialiser la base de données (ATTENTION : supprime toutes les données)
 rm ~/.brian/brian.db
-# Restart backend to recreate
+# Redémarrez le backend pour recréer
 ```
 
-### Graph not showing project hulls
-- Ensure you're in "All Projects" mode (click Project Selector → All Projects)
-- Zoom out significantly (scale < 0.4) to see project boundaries
-- Check that you have items in multiple projects
+### Le graphe n'affiche pas les enveloppes de projet
+- Assurez-vous d'être en mode "Tous les Projets" (cliquez sur Sélecteur de Projet → Tous les Projets)
+- Dézoomez significativement (échelle < 0.4) pour voir les délimitations de projet
+- Vérifiez que vous avez des éléments dans plusieurs projets
 
-## 🤝 Contributing
+## 🤝 Contribuer
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Les contributions sont les bienvenues ! N'hésitez pas à soumettre une Pull Request.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. Forkez le dépôt
+2. Créez votre branche de fonctionnalité (`git checkout -b feature/FonctionnaliteIncroyable`)
+3. Committez vos modifications (`git commit -m 'Ajouter une fonctionnalité incroyable'`)
+4. Poussez vers la branche (`git push origin feature/FonctionnaliteIncroyable`)
+5. Ouvrez une Pull Request
 
-## 📝 License
+## 📝 Licence
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Ce projet est sous licence MIT - consultez le fichier LICENSE pour plus de détails.
 
-## 🙏 Acknowledgments
+## 🙏 Remerciements
 
-- Built with [FastAPI](https://fastapi.tiangolo.com/)
-- Frontend powered by [React](https://react.dev/) and [Vite](https://vitejs.dev/)
-- Graph visualization with [D3.js](https://d3js.org/)
-- UI components from [shadcn/ui](https://ui.shadcn.com/)
-- Icons from [Lucide](https://lucide.dev/)
-- State management with [Zustand](https://zustand-demo.pmnd.rs/)
-- Animations with [Framer Motion](https://www.framer.com/motion/)
-- Goose integration via [MCP](https://modelcontextprotocol.io/)
+- Construit avec [FastAPI](https://fastapi.tiangolo.com/)
+- Frontend propulsé par [React](https://react.dev/) et [Vite](https://vitejs.dev/)
+- Visualisation graphique avec [D3.js](https://d3js.org/)
+- Composants UI de [shadcn/ui](https://ui.shadcn.com/)
+- Icônes de [Lucide](https://lucide.dev/)
+- Gestion d'état avec [Zustand](https://zustand-demo.pmnd.rs/)
+- Animations avec [Framer Motion](https://www.framer.com/motion/)
+- Intégration Goose via [MCP](https://modelcontextprotocol.io/)
 
 ## 📚 Documentation
 
-- [Quick Start Guide](QUICKSTART.md)
-- [Commands Reference](COMMANDS.md)
-- [Google Drive Integration](GOOGLE_DRIVE_INTEGRATION.md)
-- [Graph Visualization Guide](GRAPH_VISUALIZATION_EXPLAINED.md)
-- [Theme Filtering](THEME_FILTERING.md)
+- [Guide de Démarrage Rapide](QUICKSTART.md)
+- [Référence des Commandes](COMMANDS.md)
+- [Intégration Google Drive](GOOGLE_DRIVE_INTEGRATION.md)
+- [Guide de Visualisation Graphique](GRAPH_VISUALIZATION_EXPLAINED.md)
+- [Filtrage par Thème](THEME_FILTERING.md)
 
-## 🗺️ Roadmap
+## 🗺️ Feuille de Route
 
-### Recently Completed
-- ✅ Multi-project knowledge bases
-- ✅ Project selector with custom icons
-- ✅ Hierarchical zoom (Knowledge Universe)
-- ✅ Project hulls and semantic zoom
-- ✅ All Projects view
-- ✅ Project pills in Timeline and Graph
-- ✅ Dynamic port configuration (VITE_PORT, VITE_API_URL env vars)
-- ✅ Automatic project assignment for new regions
-- ✅ Fixed Universe Mode initial load issues
-- ✅ Fixed region persistence across project views
+### Récemment Complété
+- ✅ Bases de connaissances multi-projets
+- ✅ Sélecteur de projet avec icônes personnalisées
+- ✅ Zoom hiérarchique (Univers de Connaissances)
+- ✅ Enveloppes de projet et zoom sémantique
+- ✅ Vue Tous les Projets
+- ✅ Pilules de projet dans la Chronologie et le Graphe
+- ✅ Configuration dynamique des ports (variables d'environnement VITE_PORT, VITE_API_URL)
+- ✅ Attribution automatique de projet pour les nouvelles régions
+- ✅ Correction des problèmes de chargement initial en Mode Univers
+- ✅ Correction de la persistance des régions entre les vues de projet
 
-### Coming Soon
-- 🔜 Zoom slider control
-- 🔜 Preset zoom buttons (All / Project / Items)
-- 🔜 Breadcrumb navigation
-- 🔜 Keyboard shortcuts for navigation
-- 🔜 Image upload with LLM interpretation
-- 🔜 Standardized card components
+### À Venir
+- 🔜 Contrôle de curseur de zoom
+- 🔜 Boutons de zoom prédéfinis (Tout / Projet / Éléments)
+- 🔜 Navigation par fil d'Ariane
+- 🔜 Raccourcis clavier pour la navigation
+- 🔜 Téléchargement d'images avec interprétation LLM
+- 🔜 Composants de carte standardisés
 
 ---
 
-**Made with 🧠 and ❤️**
+**Fait avec 🧠 et ❤️**
 
-*A play on "brain" - because your knowledge deserves a smart home.*
+*Un jeu de mots sur "brain" - parce que vos connaissances méritent un foyer intelligent.*
