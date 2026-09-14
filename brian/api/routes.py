@@ -11,6 +11,7 @@ from ..database import Database
 from ..database.repository import KnowledgeRepository, TagRepository, ConnectionRepository, RegionRepository, RegionProfileRepository, ProjectRepository
 from ..services import SimilarityService, create_similarity_service
 from ..services.clustering import ClusteringService
+from ..services.knowledge_decay import KnowledgeDecayService, create_decay_service
 
 # Create router
 router = APIRouter()
@@ -348,6 +349,142 @@ async def get_stats():
 
 
 # ============================================================================
+# Knowledge Decay Endpoints
+# ============================================================================
+
+@router.get("/decay/scores", response_model=List[dict])
+async def get_decay_scores(
+    min_decay: Optional[float] = Query(None, ge=0.0, le=1.0, description="Minimum decay score filter"),
+    max_decay: Optional[float] = Query(None, ge=0.0, le=1.0, description="Maximum decay score filter"),
+    sort_by: str = Query("decay", description="Sort by: decay, title, created_at, access_count"),
+    sort_order: str = Query("DESC", pattern="^(ASC|DESC)$", description="Sort order"),
+    limit: int = Query(100, le=500),
+    offset: int = 0,
+    project_id: Optional[str] = Query(None, description="Filter to items in a specific project")
+):
+    """
+    Compute knowledge decay scores for all items
+    
+    Decay score combines:
+    - Time decay (items lose relevance as they age)
+    - Access frequency boost (frequently accessed items stay relevant)
+    - Linking weight boost (well-connected items stay relevant)
+    
+    Returns items with decay_score field added.
+    """
+    repo, _, conn_repo, _, _, _ = get_repositories()
+    
+    # Get items
+    items = repo.get_all(limit=limit + offset, offset=offset, project_id=project_id)
+    items_dict = [item.to_dict() for item in items]
+    
+    # Get connections for linking weight
+    connections = conn_repo.get_graph_data()["connections"]
+    
+    # Compute decay scores
+    decay_service = create_decay_service()
+    scored_items = decay_service.compute_decay_scores(items_dict, connections)
+    
+    # Apply filters
+    if min_decay is not None:
+        scored_items = [item for item in scored_items if item.get('decay_score', 0) >= min_decay]
+    if max_decay is not None:
+        scored_items = [item for item in scored_items if item.get('decay_score', 1) <= max_decay]
+    
+    # Sort
+    reverse = sort_order == "DESC"
+    if sort_by == "decay":
+        scored_items.sort(key=lambda x: x.get('decay_score', 0), reverse=reverse)
+    elif sort_by == "access_count":
+        scored_items.sort(key=lambda x: x.get('access_count', 0), reverse=reverse)
+    elif sort_by == "created_at":
+        scored_items.sort(key=lambda x: x.get('created_at', ''), reverse=reverse)
+    else:
+        scored_items.sort(key=lambda x: x.get('title', ''), reverse=reverse)
+    
+    # Apply limit (after filtering)
+    scored_items = scored_items[:limit]
+    
+    return scored_items
+
+
+@router.get("/decay/analysis", response_model=dict)
+async def get_decay_analysis(
+    project_id: Optional[str] = Query(None, description="Analyze items in a specific project")
+):
+    """
+    Get comprehensive decay analysis for the knowledge base
+    
+    Returns statistics about knowledge freshness, stale items, and items needing review.
+    """
+    repo, _, conn_repo, _, _, _ = get_repositories()
+    
+    # Get all items
+    items = repo.get_all(limit=10000, project_id=project_id)
+    items_dict = [item.to_dict() for item in items]
+    
+    # Get connections
+    connections = conn_repo.get_graph_data()["connections"]
+    
+    # Compute analysis
+    decay_service = create_decay_service()
+    analysis = decay_service.get_decay_analysis(items_dict, connections)
+    
+    return analysis
+
+
+@router.get("/decay/stale", response_model=List[dict])
+async def get_stale_items(
+    max_decay: float = Query(0.3, ge=0.0, le=1.0, description="Maximum decay score to be considered stale"),
+    limit: int = Query(50, le=500),
+    project_id: Optional[str] = Query(None, description="Filter to items in a specific project")
+):
+    """
+    Get items that are stale (low decay score)
+    
+    Useful for identifying knowledge that needs review or refresh.
+    """
+    repo, _, conn_repo, _, _, _ = get_repositories()
+    
+    # Get items
+    items = repo.get_all(limit=10000, project_id=project_id)
+    items_dict = [item.to_dict() for item in items]
+    
+    # Get connections
+    connections = conn_repo.get_graph_data()["connections"]
+    
+    # Get stale items
+    decay_service = create_decay_service()
+    stale_items = decay_service.get_stale_items(items_dict, max_decay, connections)
+    
+    # Sort by decay score (stale first)
+    stale_items.sort(key=lambda x: x.get('decay_score', 0))
+    
+    return stale_items[:limit]
+
+
+@router.post("/items/{item_id}/access", response_model=dict)
+async def record_access(item_id: str):
+    """
+    Record that an item has been accessed
+    
+    Increments the access count and updates the accessed_at timestamp.
+    This is used for knowledge decay calculations.
+    """
+    repo, _, _, _, _, _ = get_repositories()
+    
+    # Increment access count
+    new_count = repo.increment_access(item_id)
+    
+    # Return updated item
+    item = repo.get_by_id(item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    return item.to_dict()
+
+
+# ============================================================================
 # Similarity / AI Endpoints
 # ============================================================================
 
@@ -355,18 +492,23 @@ async def get_stats():
 async def get_similarity_connections(
     threshold: float = Query(0.15, ge=0.0, le=1.0, description="Minimum similarity score"),
     max_per_item: int = Query(5, ge=1, le=20, description="Max connections per item"),
-    project_id: Optional[str] = Query(None, description="Filter to items in a specific project")
+    project_id: Optional[str] = Query(None, description="Filter to items in a specific project"),
+    decay_weight: Optional[float] = Query(None, ge=0.0, le=1.0, description="Weight for decay adjustment (0-1)")
 ):
     """
     Compute content similarity connections between all items
     Uses TF-IDF and cosine similarity
     Optionally scoped to a specific project
+    Optionally adjusts similarity scores by knowledge decay
     """
-    repo, _, _, _, _, _ = get_repositories()
+    repo, _, conn_repo, _, _, _ = get_repositories()
     
     # Get items (optionally filtered by project)
     items = repo.get_all(limit=1000, project_id=project_id)
     items_dict = [item.to_dict() for item in items]
+    
+    # Get connections for decay calculation
+    connections_data = conn_repo.get_graph_data()["connections"]
     
     # Compute similarities
     similarity_service = create_similarity_service()
@@ -376,6 +518,24 @@ async def get_similarity_connections(
         max_connections_per_item=max_per_item
     )
     
+    # Optionally adjust by decay
+    if decay_weight is not None and decay_weight > 0:
+        decay_service = create_decay_service()
+        scored_items = decay_service.compute_decay_scores(items_dict, connections_data)
+        decay_map = {item['id']: item.get('decay_score', 1.0) for item in scored_items}
+        
+        for conn in connections:
+            source_decay = decay_map.get(conn['source_item_id'], 1.0)
+            target_decay = decay_map.get(conn['target_item_id'], 1.0)
+            avg_decay = (source_decay + target_decay) / 2
+            
+            conn['similarity'] = decay_service.decay_adjusted_similarity(
+                conn['similarity'],
+                avg_decay,
+                decay_weight
+            )
+            conn['similarity'] = round(conn['similarity'], 3)
+    
     return connections
 
 
@@ -383,10 +543,11 @@ async def get_similarity_connections(
 async def get_related_items(
     item_id: str,
     top_k: int = Query(5, ge=1, le=20),
-    threshold: float = Query(0.1, ge=0.0, le=1.0)
+    threshold: float = Query(0.1, ge=0.0, le=1.0),
+    decay_weight: Optional[float] = Query(None, ge=0.0, le=1.0, description="Weight for decay adjustment")
 ):
     """Get the most similar items to a specific item"""
-    repo, _, _, _, _, _ = get_repositories()
+    repo, _, conn_repo, _, _, _ = get_repositories()
     
     # Get target item
     target_item = repo.get_by_id(item_id)
@@ -398,6 +559,9 @@ async def get_related_items(
     all_items_dict = [item.to_dict() for item in all_items]
     target_dict = target_item.to_dict()
     
+    # Get connections for decay calculation
+    connections_data = conn_repo.get_graph_data()["connections"]
+    
     # Find similar items
     similarity_service = create_similarity_service()
     related = similarity_service.get_related_items(
@@ -407,14 +571,38 @@ async def get_related_items(
         threshold=threshold
     )
     
-    # Format response
-    return [
-        {
-            "item": item,
-            "similarity": score
-        }
-        for item, score in related
-    ]
+    # Optionally adjust by decay
+    if decay_weight is not None and decay_weight > 0:
+        decay_service = create_decay_service()
+        all_items_with_decay = decay_service.compute_decay_scores(all_items_dict, connections_data)
+        decay_map = {item['id']: item.get('decay_score', 1.0) for item in all_items_with_decay}
+        
+        # Adjust similarity scores
+        adjusted_related = []
+        for item, score in related:
+            item_decay = decay_map.get(item['id'], 1.0)
+            adjusted_score = decay_service.decay_adjusted_similarity(
+                score,
+                item_decay,
+                decay_weight
+            )
+            adjusted_related.append({
+                "item": item,
+                "similarity": round(adjusted_score, 3),
+                "decay_score": item_decay
+            })
+        related = adjusted_related
+    else:
+        # Format response
+        related = [
+            {
+                "item": item,
+                "similarity": score
+            }
+            for item, score in related
+        ]
+    
+    return related
 
 
 @router.get("/similarity/score", response_model=dict)

@@ -2,7 +2,7 @@
 Database schema for brian - inspired by Goose's SQLite architecture
 """
 
-SCHEMA_VERSION = 8  # FTS: item_id->id, remove tags (not in content table)
+SCHEMA_VERSION = 9  # Add access_count to knowledge_items
 
 # Schema creation SQL statements
 SCHEMA_SQL = """
@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS knowledge_items (
     language TEXT,  -- For code snippets
     favorite BOOLEAN DEFAULT FALSE,
     vote_count INTEGER DEFAULT 0,
+    access_count INTEGER DEFAULT 0,  -- For knowledge decay: how many times accessed
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- For time machine
@@ -156,6 +157,7 @@ CREATE INDEX IF NOT EXISTS idx_items_created ON knowledge_items(created_at DESC)
 CREATE INDEX IF NOT EXISTS idx_items_updated ON knowledge_items(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_items_favorite ON knowledge_items(favorite);
 CREATE INDEX IF NOT EXISTS idx_items_votes ON knowledge_items(vote_count DESC);
+CREATE INDEX IF NOT EXISTS idx_items_access ON knowledge_items(access_count DESC);
 CREATE INDEX IF NOT EXISTS idx_items_project ON knowledge_items(project_id);
 CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
 CREATE INDEX IF NOT EXISTS idx_connections_source ON connections(source_item_id);

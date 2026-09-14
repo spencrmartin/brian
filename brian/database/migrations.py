@@ -151,6 +151,11 @@ MIGRATIONS = {
         """INSERT INTO knowledge_search(rowid, id, title, content)
            SELECT rowid, id, title, content FROM knowledge_items""",
     ],
+    9: [
+        # Add access_count column for knowledge decay tracking
+        "ALTER TABLE knowledge_items ADD COLUMN access_count INTEGER DEFAULT 0",
+        "CREATE INDEX IF NOT EXISTS idx_items_access ON knowledge_items(access_count DESC)",
+    ],
 }
 
 def apply_migrations(conn, current_version: int, target_version: int):

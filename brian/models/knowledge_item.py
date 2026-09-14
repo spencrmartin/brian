@@ -122,6 +122,7 @@ class KnowledgeItem:
     language: Optional[str] = None  # For code snippets
     favorite: bool = False
     vote_count: int = 0
+    access_count: int = 0  # For knowledge decay: how many times accessed
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     accessed_at: Optional[datetime] = None
@@ -150,6 +151,7 @@ class KnowledgeItem:
             "language": self.language,
             "favorite": self.favorite,
             "vote_count": self.vote_count,
+            "access_count": self.access_count,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "accessed_at": self.accessed_at.isoformat() if self.accessed_at else None,
@@ -176,6 +178,10 @@ class KnowledgeItem:
         if 'item_type' in data and isinstance(data['item_type'], str):
             data['item_type'] = ItemType(data['item_type'])
         
+        # Ensure access_count is set (for backward compatibility)
+        if 'access_count' not in data:
+            data['access_count'] = 0
+        
         return cls(**data)
     
     @classmethod
@@ -200,6 +206,7 @@ class KnowledgeItem:
             language=row.get('language'),
             favorite=bool(row['favorite']),
             vote_count=row['vote_count'],
+            access_count=row.get('access_count', 0),
             created_at=datetime.fromisoformat(row['created_at']) if row.get('created_at') else None,
             updated_at=datetime.fromisoformat(row['updated_at']) if row.get('updated_at') else None,
             accessed_at=datetime.fromisoformat(row['accessed_at']) if row.get('accessed_at') else None,
