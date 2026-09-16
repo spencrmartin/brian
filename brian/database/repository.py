@@ -31,12 +31,14 @@ class KnowledgeRepository:
         if item.created_at:
             query = """
                 INSERT INTO knowledge_items 
-                (id, title, content, item_type, url, language, favorite, vote_count, 
+                (id, title, content, item_type, url, language, favorite, vote_count, access_count,
                  created_at, updated_at, accessed_at, link_title, link_description, link_image, link_site_name,
                  pinboard_x, pinboard_y, project_id, skill_metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             created_at_str = item.created_at.isoformat()
+            updated_at_str = item.updated_at.isoformat() if item.updated_at else created_at_str
+            accessed_at_str = item.accessed_at.isoformat() if item.accessed_at else created_at_str
             self.db.execute(query, (
                 item.id,
                 item.title,
@@ -46,9 +48,10 @@ class KnowledgeRepository:
                 item.language,
                 item.favorite,
                 item.vote_count,
+                item.access_count,
                 created_at_str,
-                created_at_str,  # updated_at same as created_at initially
-                created_at_str,  # accessed_at same as created_at initially
+                updated_at_str,
+                accessed_at_str,
                 item.link_title,
                 item.link_description,
                 item.link_image,
@@ -56,14 +59,14 @@ class KnowledgeRepository:
                 item.pinboard_x,
                 item.pinboard_y,
                 item.project_id,
-                skill_metadata_json
+                skill_metadata_json,
             ))
         else:
             query = """
                 INSERT INTO knowledge_items 
-                (id, title, content, item_type, url, language, favorite, vote_count,
+                (id, title, content, item_type, url, language, favorite, vote_count, access_count,
                  link_title, link_description, link_image, link_site_name, pinboard_x, pinboard_y, project_id, skill_metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
             self.db.execute(query, (
                 item.id,
@@ -74,6 +77,7 @@ class KnowledgeRepository:
                 item.language,
                 item.favorite,
                 item.vote_count,
+                item.access_count,
                 item.link_title,
                 item.link_description,
                 item.link_image,
@@ -81,7 +85,7 @@ class KnowledgeRepository:
                 item.pinboard_x,
                 item.pinboard_y,
                 item.project_id,
-                skill_metadata_json
+                skill_metadata_json,
             ))
         
         # Add tags if provided
@@ -153,7 +157,7 @@ class KnowledgeRepository:
         query = """
             UPDATE knowledge_items 
             SET title = ?, content = ?, item_type = ?, url = ?, 
-                language = ?, favorite = ?, vote_count = ?,
+                language = ?, favorite = ?, vote_count = ?, access_count = ?,
                 link_title = ?, link_description = ?, link_image = ?, link_site_name = ?,
                 pinboard_x = ?, pinboard_y = ?
             WHERE id = ?
@@ -166,6 +170,7 @@ class KnowledgeRepository:
             item.language,
             item.favorite,
             item.vote_count,
+            item.access_count,
             item.link_title,
             item.link_description,
             item.link_image,
@@ -347,6 +352,22 @@ class KnowledgeRepository:
         
         item = self.get_by_id(item_id)
         return item.vote_count if item else 0
+    
+    def increment_access(self, item_id: str) -> int:
+        """Increment access count (for knowledge decay tracking)"""
+        query = "UPDATE knowledge_items SET access_count = access_count + 1, accessed_at = CURRENT_TIMESTAMP WHERE id = ?"
+        self.db.execute(query, (item_id,))
+        
+        item = self.get_by_id(item_id)
+        return item.access_count if item else 0
+    
+    def set_access_count(self, item_id: str, count: int) -> int:
+        """Set access count to a specific value"""
+        query = "UPDATE knowledge_items SET access_count = ? WHERE id = ?"
+        self.db.execute(query, (count, item_id))
+        
+        item = self.get_by_id(item_id)
+        return item.access_count if item else 0
     
     def get_by_date_range(self, start_date: datetime, end_date: datetime) -> List[KnowledgeItem]:
         """Get items within a date range (for Time Machine view)"""
