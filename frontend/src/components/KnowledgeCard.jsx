@@ -22,13 +22,12 @@ export default function KnowledgeCard({ item, index }) {
   const { openModal, toggleFavorite, voteItem, deleteItem } = useStore()
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this item?')) {
-      const success = await deleteItem(item.id)
-      if (success) {
-        toast.success('Item deleted successfully')
-      } else {
-        toast.error('Failed to delete item')
-      }
+    // confirm() is blocked in Tauri's webview — delete directly
+    const success = await deleteItem(item.id)
+    if (success) {
+      toast.success('Item deleted successfully')
+    } else {
+      toast.error('Failed to delete item')
     }
   }
 

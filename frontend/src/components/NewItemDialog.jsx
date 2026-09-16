@@ -40,13 +40,16 @@ import {
   Code2,
   FileCode,
   Sparkles,
+  Image as ImageIcon,
 } from 'lucide-react'
+import { getApiBaseUrl } from '@/lib/backend'
 
 const ITEM_TYPES = [
   { value: 'note', label: 'Note', Icon: FileText },
   { value: 'link', label: 'Link', Icon: LinkIcon },
   { value: 'code', label: 'Code', Icon: Code2 },
   { value: 'paper', label: 'Paper', Icon: FileCode },
+  { value: 'image', label: 'Image', Icon: ImageIcon },
   { value: 'custom', label: 'Custom', Icon: Sparkles },
 ]
 
@@ -91,6 +94,8 @@ export function NewItemDialog({ open, onOpenChange, onSubmit }) {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [imageFile, setImageFile] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
   const textareaRef = useRef(null)
 
   // Insert markdown formatting at cursor position
@@ -230,6 +235,33 @@ export function NewItemDialog({ open, onOpenChange, onSubmit }) {
     setError(null)
 
     try {
+      // Image upload — use the multipart /upload/image endpoint
+      if (formData.item_type === 'image') {
+        if (!imageFile) {
+          setError('Please select an image file')
+          setLoading(false)
+          return
+        }
+        const fd = new FormData()
+        fd.append('file', imageFile)
+        fd.append('title', formData.title || imageFile.name.replace(/\.[^/.]+$/, ''))
+        fd.append('tags', formData.tags)
+        const res = await fetch(`${getApiBaseUrl()}/upload/image`, { method: 'POST', body: fd })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.detail || 'Upload failed')
+        }
+        // Reset
+        setFormData({ title: '', content: '', item_type: 'note', custom_type: '', url: '', language: '', tags: '' })
+        setImageFile(null)
+        setImagePreview(null)
+        onOpenChange(false)
+        // Trigger a reload — onSubmit won't work here since we bypassed it
+        if (typeof onSubmit._reload === 'function') onSubmit._reload()
+        else window.dispatchEvent(new Event('brian-items-changed'))
+        return
+      }
+
       // Convert tags string to array
       const tags = formData.tags
         .split(',')
@@ -264,6 +296,8 @@ export function NewItemDialog({ open, onOpenChange, onSubmit }) {
         language: '',
         tags: '',
       })
+      setImageFile(null)
+      setImagePreview(null)
       onOpenChange(false)
     } catch (err) {
       setError(err.message)
@@ -397,7 +431,50 @@ export function NewItemDialog({ open, onOpenChange, onSubmit }) {
               </div>
             )}
 
-            {/* Content with toolbar */}
+            {/* Image file picker — shown when type is image */}
+            {formData.item_type === 'image' && (
+              <div className="grid gap-2">
+                <Label>Image *</Label>
+                <div 
+                  className="relative border-2 border-dashed border-border rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                  onClick={() => document.getElementById('image-file-input')?.click()}
+                >
+                  <input
+                    id="image-file-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setImageFile(file)
+                        const reader = new FileReader()
+                        reader.onload = (ev) => setImagePreview(ev.target.result)
+                        reader.readAsDataURL(file)
+                        if (!formData.title) {
+                          handleChange('title', file.name.replace(/\.[^/.]+$/, ''))
+                        }
+                      }
+                    }}
+                  />
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Preview" className="max-h-[300px] mx-auto rounded-lg object-contain" />
+                  ) : (
+                    <div className="text-muted-foreground">
+                      <ImageIcon className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                      <p className="text-sm font-medium">Click to select an image</p>
+                      <p className="text-xs mt-1">PNG, JPG, GIF, WebP, SVG</p>
+                    </div>
+                  )}
+                </div>
+                {imageFile && (
+                  <p className="text-xs text-muted-foreground">{imageFile.name} ({(imageFile.size / 1024).toFixed(0)} KB)</p>
+                )}
+              </div>
+            )}
+
+            {/* Content with toolbar — hidden for image type */}
+            {formData.item_type !== 'image' && (
             <div className="grid gap-2 flex-1">
               <div className="flex items-center justify-between">
                 <Label htmlFor="content">Content *</Label>
@@ -508,6 +585,7 @@ export function NewItemDialog({ open, onOpenChange, onSubmit }) {
                 required
               />
             </div>
+            )}
 
             {/* URL (optional) */}
             {(formData.item_type === 'link' || formData.item_type === 'paper') && (
