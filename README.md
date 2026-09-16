@@ -2,6 +2,8 @@
 <img width="303" height="202" alt="Screenshot 2026-02-20 at 4 30 00 PM" src="https://github.com/user-attachments/assets/c5ac10bc-14ce-4113-b116-f40b379c1726" />
 
 > A play on "brain" - Brian is your intelligent knowledge repository with vector-based similarity search, beautiful graph visualization, and seamless Goose integration. Because I cannot spell 9/10 times and I make this mistake all the time now you can too!
+
+Un juego con "brain" - Brian es tu repositorio de conocimiento inteligente con búsqueda de similitud basada en vectores, visualización de grafos hermosa e integración perfecta con Goose. ¡Porque no puedo deletrear bien 9 de cada 10 veces y cometo este error todo el tiempo, ahora tú también puedes!
 <img width="1528" height="1109" alt="Screenshot 2026-02-19 at 3 35 51 PM" src="https://github.com/user-attachments/assets/5c849425-6c69-4d44-bd11-e19d828272f5" />
 
 <img width="1527" height="1110" alt="Screenshot 2026-02-19 at 3 36 05 PM" src="https://github.com/user-attachments/assets/6de1efb2-5059-49e7-81a9-6b1999f6f147" />
